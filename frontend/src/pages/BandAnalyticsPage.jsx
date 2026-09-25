@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { BarChart3, Search } from 'lucide-react'
+import { BarChart3 } from 'lucide-react'
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { AdminLayout } from '../components/layout'
-import { Button, Card, EmptyState, Field, LoadingBlock, StatCard, TextInput } from '../components/ui'
+import { Button, Card, EmptyState, EntitySearchSelect, Field, LoadingBlock, StatCard } from '../components/ui'
 import { AnalyticsAPI } from '../lib/api'
 import { useToast } from '../context/ToastContext'
 import { formatNumber, titleCase } from '../lib/formatters'
@@ -17,20 +17,20 @@ function byStatusToChartData(byStatus) {
 export default function BandAnalyticsPage() {
   const toast = useToast()
   const [bandId, setBandId] = useState('')
+  const [bandLabel, setBandLabel] = useState('')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [searchedId, setSearchedId] = useState('')
+  const [searchedLabel, setSearchedLabel] = useState('')
 
-  async function handleSearch(e) {
-    e.preventDefault()
-    if (!bandId.trim()) return
+  async function loadAnalytics(id, label) {
+    if (!id) return
     setLoading(true)
     setError('')
     try {
-      const res = await AnalyticsAPI.bandAnalytics(bandId.trim())
+      const res = await AnalyticsAPI.bandAnalytics(id)
       setData(res.data)
-      setSearchedId(bandId.trim())
+      setSearchedLabel(label || '')
     } catch (err) {
       setData(null)
       setError(err?.message || 'Failed to load analytics for this band.')
@@ -40,17 +40,27 @@ export default function BandAnalyticsPage() {
     }
   }
 
+  function handleSearch(e) {
+    e.preventDefault()
+    loadAnalytics(bandId, bandLabel)
+  }
+
   return (
     <AdminLayout title="Band Analytics" description="Look up booking, request, and content performance for any band">
       <Card className="mb-6 p-4">
         <form onSubmit={handleSearch} className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="flex-1">
-            <Field label="Band ID">
-              <TextInput
-                icon={Search}
-                placeholder="e.g. 6a50caca2da34839fbeec418"
+            <Field label="Band name">
+              <EntitySearchSelect
+                role="band"
+                placeholder="Search band name…"
                 value={bandId}
-                onChange={(e) => setBandId(e.target.value)}
+                valueLabel={bandLabel}
+                onSelect={(id, label) => {
+                  setBandId(id || '')
+                  setBandLabel(label || '')
+                  if (id) loadAnalytics(id, label)
+                }}
               />
             </Field>
           </div>
@@ -66,13 +76,13 @@ export default function BandAnalyticsPage() {
       )}
 
       {!loading && !error && !data && (
-        <EmptyState icon={BarChart3} title="Enter a band ID" description="Search for a band above to view their analytics." />
+        <EmptyState icon={BarChart3} title="Search for a band" description="Search for a band by name above to view their analytics." />
       )}
 
       {data && !loading && (
         <div className="space-y-6">
           <p className="text-xs text-slate-500">
-            Showing analytics for band <span className="font-mono text-slate-300">{searchedId}</span>
+            Showing analytics for band <span className="font-medium text-slate-300">{searchedLabel || bandId}</span>
           </p>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">

@@ -7,11 +7,11 @@ import {
   ConfirmDialog,
   Drawer,
   EmptyState,
+  EntitySearchSelect,
   Field,
   KeyValue,
   LoadingBlock,
   Pagination,
-  RawPanel,
   SectionTitle,
   Select,
   StatusBadge,
@@ -26,7 +26,7 @@ import { formatCurrency, formatDate, formatDateTime } from '../lib/formatters'
 const STATUS_OPTIONS = ['pending', 'confirmed', 'completed', 'cancelled', 'expired']
 
 export default function BookingsPage() {
-  const [filters, setFilters] = useState({ status: '', band: '', user: '', from: '', to: '' })
+  const [filters, setFilters] = useState({ status: '', band: '', bandLabel: '', user: '', userLabel: '', from: '', to: '' })
   const [page, setPage] = useState(1)
   const limit = 20
   const [data, setData] = useState(null)
@@ -37,7 +37,8 @@ export default function BookingsPage() {
   const fetchList = useCallback(() => {
     setLoading(true)
     setError('')
-    BookingsAPI.list({ ...filters, page, limit })
+    const { bandLabel: _bandLabel, userLabel: _userLabel, ...apiFilters } = filters
+    BookingsAPI.list({ ...apiFilters, page, limit })
       .then((res) => setData(res.data))
       .catch((err) => setError(err?.message || 'Failed to load bookings.'))
       .finally(() => setLoading(false))
@@ -81,8 +82,26 @@ export default function BookingsPage() {
               </option>
             ))}
           </Select>
-          <TextInput placeholder="Band ID" value={filters.band} onChange={(e) => updateFilter('band', e.target.value)} />
-          <TextInput placeholder="User ID" value={filters.user} onChange={(e) => updateFilter('user', e.target.value)} />
+          <EntitySearchSelect
+            role="band"
+            placeholder="Search band name…"
+            value={filters.band}
+            valueLabel={filters.bandLabel}
+            onSelect={(id, label) => {
+              setPage(1)
+              setFilters((f) => ({ ...f, band: id || '', bandLabel: label || '' }))
+            }}
+          />
+          <EntitySearchSelect
+            role="user"
+            placeholder="Search customer name…"
+            value={filters.user}
+            valueLabel={filters.userLabel}
+            onSelect={(id, label) => {
+              setPage(1)
+              setFilters((f) => ({ ...f, user: id || '', userLabel: label || '' }))
+            }}
+          />
           <TextInput type="date" value={filters.from} onChange={(e) => updateFilter('from', e.target.value)} />
           <TextInput type="date" value={filters.to} onChange={(e) => updateFilter('to', e.target.value)} />
         </div>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Settings, ListTree } from 'lucide-react'
 import { AdminLayout } from '../components/layout'
-import { Card, EmptyState, LoadingBlock, RawPanel, Tabs } from '../components/ui'
+import { AutoFields, Card, EmptyState, LoadingBlock, SectionTitle, Tabs } from '../components/ui'
 import { ConfigAPI } from '../lib/api'
 import { titleCase } from '../lib/formatters'
 
@@ -59,30 +59,26 @@ export default function ConfigPage() {
         )}
 
         {!loading && !error && tab === 'fields' && (
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            {fieldOptions &&
-              Object.entries(fieldOptions).map(([group, fields]) => (
-                <Card key={group} className="p-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {fieldOptions?.availabilityRequest ? (
+              Object.entries(fieldOptions.availabilityRequest).map(([field, values]) => (
+                <Card key={field} className="p-5">
                   <div className="mb-3 flex items-center gap-2">
                     <ListTree className="h-4 w-4 text-brand-400" />
-                    <h3 className="text-sm font-semibold text-slate-200">{titleCase(group)}</h3>
+                    <h3 className="text-sm font-semibold text-slate-200">{titleCase(field)}</h3>
                   </div>
-                  <div className="space-y-3">
-                    {Object.entries(fields).map(([field, values]) => (
-                      <div key={field}>
-                        <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-slate-500">{titleCase(field)}</p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {(Array.isArray(values) ? values : []).map((v) => (
-                            <span key={v} className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-0.5 text-xs text-slate-300">
-                              {v}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(Array.isArray(values) ? values : []).map((v) => (
+                      <span key={v} className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-0.5 text-xs text-slate-300">
+                        {v}
+                      </span>
                     ))}
                   </div>
                 </Card>
-              ))}
+              ))
+            ) : (
+              <EmptyState title="No field options" />
+            )}
           </div>
         )}
       </div>
@@ -108,12 +104,11 @@ function PolicyGrid({ policy }) {
         </div>
       )}
       {nested.map(([key, value]) => (
-        <div key={key}>
-          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">{titleCase(key)}</p>
-          <RawPanel data={value} label={`${titleCase(key)} details`} />
+        <div key={key} className="rounded-xl border border-white/8 bg-white/[0.02] p-4">
+          <SectionTitle>{titleCase(key)}</SectionTitle>
+          <AutoFields data={value} />
         </div>
       ))}
-      <RawPanel data={policy} label="Full policy object" />
     </div>
   )
 }

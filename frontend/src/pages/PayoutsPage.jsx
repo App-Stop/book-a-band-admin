@@ -7,10 +7,10 @@ import {
   ConfirmDialog,
   Drawer,
   EmptyState,
+  EntitySearchSelect,
   KeyValue,
   LoadingBlock,
   Pagination,
-  RawPanel,
   SectionTitle,
   StatusBadge,
   SuggestInput,
@@ -24,7 +24,7 @@ import { formatCurrency, formatDate, formatDateTime } from '../lib/formatters'
 const STATUS_SUGGESTIONS = ['pending', 'processing', 'paid', 'failed', 'waiting_onboarding', 'cancelled']
 
 export default function PayoutsPage() {
-  const [filters, setFilters] = useState({ status: '', band: '', from: '', to: '' })
+  const [filters, setFilters] = useState({ status: '', band: '', bandLabel: '', from: '', to: '' })
   const [page, setPage] = useState(1)
   const limit = 20
   const [data, setData] = useState(null)
@@ -35,7 +35,8 @@ export default function PayoutsPage() {
   const fetchList = useCallback(() => {
     setLoading(true)
     setError('')
-    PayoutsAPI.list({ ...filters, page, limit })
+    const { bandLabel: _bandLabel, ...apiFilters } = filters
+    PayoutsAPI.list({ ...apiFilters, page, limit })
       .then((res) => setData(res.data))
       .catch((err) => setError(err?.message || 'Failed to load payouts.'))
       .finally(() => setLoading(false))
@@ -69,7 +70,16 @@ export default function PayoutsPage() {
             value={filters.status}
             onChange={(e) => updateFilter('status', e.target.value)}
           />
-          <TextInput placeholder="Band ID" value={filters.band} onChange={(e) => updateFilter('band', e.target.value)} />
+          <EntitySearchSelect
+            role="band"
+            placeholder="Search band name…"
+            value={filters.band}
+            valueLabel={filters.bandLabel}
+            onSelect={(id, label) => {
+              setPage(1)
+              setFilters((f) => ({ ...f, band: id || '', bandLabel: label || '' }))
+            }}
+          />
           <TextInput type="date" value={filters.from} onChange={(e) => updateFilter('from', e.target.value)} />
           <TextInput type="date" value={filters.to} onChange={(e) => updateFilter('to', e.target.value)} />
         </div>

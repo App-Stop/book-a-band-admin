@@ -1,8 +1,9 @@
-import { forwardRef, useEffect, useId, useRef } from 'react'
+import { forwardRef, useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronLeft, ChevronRight, Loader2, Search, X } from 'lucide-react'
 import { clsx } from 'clsx'
-import { titleCase } from '../lib/formatters'
+import { formatCurrency, formatDateTime, formatNumber, titleCase, toDate } from '../lib/formatters'
+import { UsersAPI } from '../lib/api'
 
 /* ----------------------------- Buttons ----------------------------- */
 
@@ -504,6 +505,217 @@ export function SectionTitle({ children, action }) {
     <div className="mb-3 flex items-center justify-between">
       <h4 className="text-sm font-semibold text-slate-200">{children}</h4>
       {action}
+    </div>
+  )
+}
+
+/* ------------------------- Entity name search select ------------------------- */
+
+/**
+ * Type-ahead text input that searches `/admin/users` by name (role-scoped) and
+ * resolves the pick to an id, so callers can filter list endpoints by the id
+ * they actually accept while the admin only ever types a name.
+ */
+export function EntitySearchSelect({ role, placeholder = 'Search by name…', value, valueLabel, onSelect, className }) {
+  const [query, setQuery] = useState(valueLabel || '')
+  const [open, setOpen] = useState(false)
+  const [options, setOptions] = useState([])
+  const [loading, setLoading] = useState(false)
+  const boxRef = useRef(null)
+
+  useEffect(() => {
+    setQuery(valueLabel || '')
+  }, [valueLabel])
+
+  useEffect(() => {
+    if (!open) return undefined
+    const q = query.trim()
+    if (!q) {
+      setOptions([])
+      setLoading(false)
+      return undefined
+    }
+    setLoading(true)
+    const handle = setTimeout(() => {
+      UsersAPI.list({ role, search: q, limit: 8 })
+        .then((res) => setOptions(res.data?.items || []))
+        .catch(() => setOptions([]))
+        .finally(() => setLoading(false))
+    }, 300)
+    return () => clearTimeout(handle)
+  }, [query, open, role])
+
+  useEffect(() => {
+    function onClickOutside(e) {
+      if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onClickOutside)
+    return () => document.removeEventListener('mousedown', onClickOutside)
+  }, [])
+
+  return (
+    <div className="relative" ref={boxRef}>
+      <TextInput
+        icon={Search}
+        placeholder={placeholder}
+        className={className}
+        value={query}
+        onFocus={() => setOpen(true)}
+        onChange={(e) => {
+          const next = e.target.value
+          setQuery(next)
+          setOpen(true)
+          if (!next.trim() && value) onSelect(null, '')
+        }}
+      />
+      {value && query && (
+        <button
+          type="button"
+          tabIndex={-1}
+          onClick={() => {
+            setQuery('')
+            onSelect(null, '')
+          }}
+          className="focus-ring absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-0.5 text-slate-500 hover:text-slate-200"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      )}
+      {open && query.trim() && (loading || options.length > 0) && (
+        <div className="absolute z-30 mt-1.5 w-full overflow-hidden rounded-xl border border-white/10 bg-[#160e2b] shadow-2xl shadow-black/50">
+          {loading && <div className="px-3.5 py-2.5 text-xs text-slate-500">Searching…</div>}
+          {!loading &&
+            options.map((o) => (
+              <button
+                key={o._id}
+                type="button"
+                onClick={() => {
+                  onSelect(o._id, o.fullName || '')
+                  setQuery(o.fullName || '')
+                  setOpen(false)
+                }}
+                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm text-slate-200 transition hover:bg-white/8"
+              >
+                {o.profilePicture ? (
+                  <img src={o.profilePicture} alt="" className="h-6 w-6 shrink-0 rounded-full object-cover" />
+                ) : (
+                  <div className="h-6 w-6 shrink-0 rounded-full bg-white/10" />
+                )}
+                <span className="min-w-0 flex-1 truncate">{o.fullName || 'Unnamed'}</span>
+                {o.email && <span className="shrink-0 truncate text-xs text-slate-500">{o.email}</span>}
+              </button>
+            ))}
+          {!loading && options.length === 0 && (
+            <div className="px-3.5 py-2.5 text-xs text-slate-500">No matches found.</div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ------------------------------ Auto-formatted fields ------------------------------ */
+
+const AUTO_HIDDEN_KEYS = new Set(['__v', 'password', 'otp', 'otpExpiry', 'resetToken', 'resetTokenExpiry'])
+
+function humanizeKey(key) {
+  return titleCase(String(key).replace(/([a-z0-9])([A-Z])/g, '$1 $2'))
+}
+
+function isDateKey(key) {
+  return /(At|Date)$/.test(key)
+}
+
+function isMoneyKey(key) {
+  return /(amount|price|fee|cost|total|payout|earning|revenue|balance)/i.test(key)
+}
+
+function isIdKey(key) {
+  return key === '_id' || key === 'id' || /Id$/.test(key)
+}
+
+function AutoPrimitiveValue({ keyName, value }) {
+  if (value == null || value === '') return <span className="text-slate-500">—</span>
+  if (typeof value === 'boolean') return <BoolBadge value={value} />
+  if (typeof value === 'number') {
+    return <span>{isMoneyKey(keyName) ? formatCurrency(value) : formatNumber(value)}</span>
+  }
+  if (typeof value === 'string') {
+    if (isIdKey(keyName)) return <span className="font-mono text-xs">{value}</span>
+    if (isDateKey(keyName) && toDate(value)) return <span>{formatDateTime(value)}</span>
+    return <span className="whitespace-pre-wrap break-words">{value}</span>
+  }
+  return <span className="text-slate-500">—</span>
+}
+
+/**
+ * Renders any plain object/array as neat, human-readable UI — labelled rows for
+ * primitives, cards for nested objects, chip/row lists for arrays — instead of
+ * dumping raw JSON. Used as the default detail view wherever the exact backend
+ * schema isn't pinned down (posts, open requests, packages, platform config, …).
+ */
+export function AutoFields({ data, exclude = [], depth = 0 }) {
+  if (data == null) return <p className="text-sm text-slate-500">No data.</p>
+
+  if (Array.isArray(data)) {
+    if (data.length === 0) return <p className="text-xs text-slate-500">None</p>
+    const allPrimitive = data.every((item) => item == null || typeof item !== 'object')
+    if (allPrimitive) {
+      return (
+        <div className="flex flex-wrap gap-1.5">
+          {data.map((item, i) => (
+            <Badge key={i}>{String(item)}</Badge>
+          ))}
+        </div>
+      )
+    }
+    return (
+      <div className="space-y-2">
+        {data.map((item, i) => (
+          <div key={item?._id || i} className="rounded-xl border border-white/8 bg-white/[0.02] p-3.5">
+            <AutoFields data={item} depth={depth + 1} />
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  if (typeof data !== 'object') {
+    return <AutoPrimitiveValue keyName="" value={data} />
+  }
+
+  const entries = Object.entries(data).filter(([k]) => !AUTO_HIDDEN_KEYS.has(k) && !exclude.includes(k))
+  if (entries.length === 0) return <p className="text-xs text-slate-500">No details available.</p>
+
+  const primitive = entries.filter(([, v]) => v == null || typeof v !== 'object')
+  const objects = entries.filter(([, v]) => v && typeof v === 'object' && !Array.isArray(v))
+  const arrays = entries.filter(([, v]) => Array.isArray(v))
+
+  return (
+    <div className="space-y-4">
+      {primitive.length > 0 && (
+        <div className="divide-y divide-white/5">
+          {primitive.map(([k, v]) => (
+            <KeyValue key={k} label={humanizeKey(k)} value={<AutoPrimitiveValue keyName={k} value={v} />} />
+          ))}
+        </div>
+      )}
+      {objects.map(([k, v]) => (
+        <div key={k}>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{humanizeKey(k)}</p>
+          <div className="rounded-xl border border-white/8 bg-white/[0.02] p-3.5">
+            <AutoFields data={v} depth={depth + 1} />
+          </div>
+        </div>
+      ))}
+      {arrays.map(([k, v]) => (
+        <div key={k}>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+            {humanizeKey(k)} {v.length > 0 && <span className="text-slate-600">({v.length})</span>}
+          </p>
+          <AutoFields data={v} depth={depth + 1} />
+        </div>
+      ))}
     </div>
   )
 }

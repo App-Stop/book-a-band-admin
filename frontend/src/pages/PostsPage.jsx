@@ -2,24 +2,27 @@ import { useCallback, useEffect, useState } from 'react'
 import { MessagesSquare, Trash2 } from 'lucide-react'
 import { AdminLayout } from '../components/layout'
 import {
+  AutoFields,
   Badge,
   Button,
   Card,
   ConfirmDialog,
+  Drawer,
   EmptyState,
+  EntitySearchSelect,
+  KeyValue,
   Pagination,
-  RawPanel,
   Select,
   Table,
   TextInput,
 } from '../components/ui'
 import { PostsAPI } from '../lib/api'
 import { useToast } from '../context/ToastContext'
-import { formatDate, formatNumber } from '../lib/formatters'
+import { formatDate, formatDateTime, formatNumber } from '../lib/formatters'
 
 export default function PostsPage() {
   const toast = useToast()
-  const [filters, setFilters] = useState({ band: '', isDeleted: '' })
+  const [filters, setFilters] = useState({ band: '', bandLabel: '', isDeleted: '' })
   const [page, setPage] = useState(1)
   const limit = 20
   const [data, setData] = useState(null)
@@ -27,7 +30,7 @@ export default function PostsPage() {
   const [error, setError] = useState('')
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [busy, setBusy] = useState(false)
-  const [rawId, setRawId] = useState(null)
+  const [selectedPostId, setSelectedPostId] = useState(null)
   const [commentId, setCommentId] = useState('')
   const [commentBusy, setCommentBusy] = useState(false)
   const [commentDeleteConfirm, setCommentDeleteConfirm] = useState(false)
@@ -80,8 +83,6 @@ export default function PostsPage() {
     }
   }
 
-  const rawRow = data?.items?.find((p) => p._id === rawId)
-
   const columns = [
     {
       key: 'band',
@@ -107,16 +108,6 @@ export default function PostsPage() {
       className: 'text-right',
       render: (p) => (
         <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              setRawId(p._id)
-            }}
-            className="focus-ring rounded-lg px-2 py-1 text-xs text-slate-400 hover:bg-white/5 hover:text-slate-200"
-          >
-            Details
-          </button>
           {!p.isDeleted && (
             <Button
               size="sm"
@@ -138,7 +129,16 @@ export default function PostsPage() {
     <AdminLayout title="Posts & Comments" description="Moderate band posts and individual comments">
       <Card className="mb-4 p-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <TextInput placeholder="Band ID" value={filters.band} onChange={(e) => updateFilter('band', e.target.value)} />
+          <EntitySearchSelect
+            role="band"
+            placeholder="Search band name…"
+            value={filters.band}
+            valueLabel={filters.bandLabel}
+            onSelect={(id, label) => {
+              setPage(1)
+              setFilters((f) => ({ ...f, band: id || '', bandLabel: label || '' }))
+            }}
+          />
           <Select value={filters.isDeleted} onChange={(e) => updateFilter('isDeleted', e.target.value)}>
             <option value="">All posts</option>
             <option value="false">Live only</option>
@@ -175,6 +175,7 @@ export default function PostsPage() {
           rows={data?.items || []}
           rowKey={(p) => p._id}
           loading={loading}
+          onRowClick={(p) => setSelectedPostId(p._id)}
           emptyState={<EmptyState icon={MessagesSquare} title="No posts found" description="Try adjusting your filters." />}
         />
         {data?.pagination && (
@@ -190,10 +191,15 @@ export default function PostsPage() {
 
       {error && !data && <p className="mt-4 text-sm text-danger-400">{error}</p>}
 
-      {rawRow && (
-        <div className="mt-4">
-          <RawPanel data={rawRow} label={`Post ${rawRow._id}`} />
-        </div>
+      {selectedPostId && (
+        <PostDetailDrawer
+          post={data?.items?.find((p) => p._id === selectedPostId)}
+          onClose={() => setSelectedPostId(null)}
+          onRemove={(post) => {
+            setSelectedPostId(null)
+            setDeleteTarget(post)
+          }}
+        />
       )}
 
       <ConfirmDialog
@@ -218,5 +224,65 @@ export default function PostsPage() {
         loading={commentBusy}
       />
     </AdminLayout>
+  )
+}
+
+const POST_KNOWN_KEYS = ['_id', 'band', 'caption', 'likeCount', 'commentCount', 'isDeleted', 'createdAt', 'updatedAt']
+
+function PostDetailDrawer({ post, onClose, onRemove }) {
+  if (!post) return null
+
+  const hasExtraFields = Object.keys(post).some((k) => !POST_KNOWN_KEYS.includes(k) && k !== '__v')
+
+  return (
+    <Drawer
+      open
+      onClose={onClose}
+      title="Post detail"
+      subtitle={post._id}
+      footer={
+        !post.isDeleted && (
+          <Button variant="danger" onClick={() => onRemove(post)}>
+            <Trash2 className="h-4 w-4" /> Remove post
+          </Button>
+        )
+      }
+    >
+      <div className="space-y-5">
+        <div className="flex items-center gap-3">
+          {post.band?.profilePicture && (
+            <img src={post.band.profilePicture} alt="" className="h-10 w-10 rounded-full object-cover" />
+          )}
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-slate-100">{post.band?.fullName || 'Unknown band'}</p>
+            <Badge tone={post.isDeleted ? 'danger' : 'success'}>{post.isDeleted ? 'Removed' : 'Live'}</Badge>
+          </div>
+        </div>
+
+        <Card className="p-4">
+          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">Caption</p>
+          <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-100">
+            {post.caption || 'No caption.'}
+          </p>
+        </Card>
+
+        <Card className="p-4">
+          <KeyValue label="Post ID" value={post._id} mono />
+          <KeyValue label="Likes" value={formatNumber(post.likeCount)} />
+          <KeyValue label="Comments" value={formatNumber(post.commentCount)} />
+          <KeyValue label="Posted" value={formatDateTime(post.createdAt)} />
+          {post.updatedAt && <KeyValue label="Last updated" value={formatDateTime(post.updatedAt)} />}
+        </Card>
+
+        {hasExtraFields && (
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Additional details</p>
+            <Card className="p-4">
+              <AutoFields data={post} exclude={POST_KNOWN_KEYS} />
+            </Card>
+          </div>
+        )}
+      </div>
+    </Drawer>
   )
 }

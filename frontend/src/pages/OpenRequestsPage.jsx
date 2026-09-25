@@ -2,21 +2,24 @@ import { useCallback, useEffect, useState } from 'react'
 import { Inbox, TimerOff } from 'lucide-react'
 import { AdminLayout } from '../components/layout'
 import {
+  AutoFields,
   Button,
   Card,
   ConfirmDialog,
+  Drawer,
   EmptyState,
+  KeyValue,
   Pagination,
-  RawPanel,
   Select,
   StatusBadge,
   Table,
 } from '../components/ui'
 import { OpenRequestsAPI } from '../lib/api'
 import { useToast } from '../context/ToastContext'
-import { formatDate } from '../lib/formatters'
+import { formatDateTime } from '../lib/formatters'
 
 const STATUS_OPTIONS = ['open', 'closed', 'expired', 'cancelled']
+const REQUEST_KNOWN_KEYS = ['_id', 'user', 'status', 'createdAt', 'updatedAt']
 
 export default function OpenRequestsPage() {
   const toast = useToast()
@@ -28,7 +31,7 @@ export default function OpenRequestsPage() {
   const [error, setError] = useState('')
   const [expireTarget, setExpireTarget] = useState(null)
   const [busy, setBusy] = useState(false)
-  const [rawId, setRawId] = useState(null)
+  const [selectedId, setSelectedId] = useState(null)
 
   const fetchList = useCallback(() => {
     setLoading(true)
@@ -70,7 +73,7 @@ export default function OpenRequestsPage() {
       ),
     },
     { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
-    { key: 'created', header: 'Created', render: (r) => formatDate(r.createdAt) },
+    { key: 'created', header: 'Created', render: (r) => formatDateTime(r.createdAt) },
     {
       key: 'actions',
       header: '',
@@ -78,16 +81,6 @@ export default function OpenRequestsPage() {
       className: 'text-right',
       render: (r) => (
         <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation()
-              setRawId(r._id)
-            }}
-            className="focus-ring rounded-lg px-2 py-1 text-xs text-slate-400 hover:bg-white/5 hover:text-slate-200"
-          >
-            Details
-          </button>
           {r.status === 'open' && (
             <Button
               size="sm"
@@ -105,7 +98,7 @@ export default function OpenRequestsPage() {
     },
   ]
 
-  const rawRow = data?.items?.find((r) => r._id === rawId)
+  const selectedRequest = data?.items?.find((r) => r._id === selectedId)
 
   return (
     <AdminLayout title="Open Requests" description="Manage open booking requests posted by customers">
@@ -128,6 +121,7 @@ export default function OpenRequestsPage() {
           rows={data?.items || []}
           rowKey={(r) => r._id}
           loading={loading}
+          onRowClick={(r) => setSelectedId(r._id)}
           emptyState={<EmptyState icon={Inbox} title="No open requests" description="Try adjusting your filters." />}
         />
         {data?.pagination && (
@@ -143,10 +137,15 @@ export default function OpenRequestsPage() {
 
       {error && !data && <p className="mt-4 text-sm text-danger-400">{error}</p>}
 
-      {rawRow && (
-        <div className="mt-4">
-          <RawPanel data={rawRow} label={`Request ${rawRow._id}`} />
-        </div>
+      {selectedRequest && (
+        <OpenRequestDrawer
+          request={selectedRequest}
+          onClose={() => setSelectedId(null)}
+          onExpire={(r) => {
+            setSelectedId(null)
+            setExpireTarget(r)
+          }}
+        />
       )}
 
       <ConfirmDialog
@@ -160,5 +159,46 @@ export default function OpenRequestsPage() {
         loading={busy}
       />
     </AdminLayout>
+  )
+}
+
+function OpenRequestDrawer({ request, onClose, onExpire }) {
+  const hasExtraFields = Object.keys(request).some((k) => !REQUEST_KNOWN_KEYS.includes(k) && k !== '__v')
+
+  return (
+    <Drawer
+      open
+      onClose={onClose}
+      title="Open request detail"
+      subtitle={request._id}
+      footer={
+        request.status === 'open' && (
+          <Button variant="danger" onClick={() => onExpire(request)}>
+            <TimerOff className="h-4 w-4" /> Expire request
+          </Button>
+        )
+      }
+    >
+      <div className="space-y-5">
+        <StatusBadge status={request.status} />
+
+        <Card className="p-4">
+          <KeyValue label="Request ID" value={request._id} mono />
+          <KeyValue label="Requester" value={request.user?.fullName} />
+          <KeyValue label="Requester email" value={request.user?.email} />
+          <KeyValue label="Created" value={formatDateTime(request.createdAt)} />
+          {request.updatedAt && <KeyValue label="Last updated" value={formatDateTime(request.updatedAt)} />}
+        </Card>
+
+        {hasExtraFields && (
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Request details</p>
+            <Card className="p-4">
+              <AutoFields data={request} exclude={REQUEST_KNOWN_KEYS} />
+            </Card>
+          </div>
+        )}
+      </div>
+    </Drawer>
   )
 }
