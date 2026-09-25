@@ -181,12 +181,14 @@ export function SuggestInput({ suggestions = [], className, ...props }) {
   )
 }
 
-export const Select = forwardRef(function Select({ className, children, ...props }, ref) {
+export const Select = forwardRef(function Select({ className, children, style, ...props }, ref) {
   return (
     <select
       ref={ref}
+      style={{ colorScheme: 'dark', ...style }}
       className={clsx(
         'focus-ring w-full appearance-none rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2 text-sm text-slate-100',
+        '[&>option]:bg-[#160e2b] [&>option]:text-slate-100',
         className,
       )}
       {...props}
