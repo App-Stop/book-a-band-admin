@@ -105,6 +105,11 @@ export const AnalyticsAPI = {
   bandAnalytics: (bandId) => apiClient.get(`/admin/bands/${bandId}/analytics`),
 }
 
+export const ReportsAPI = {
+  list: (params) => apiClient.get('/admin/reports', { params: stripEmpty(params) }),
+  resolve: (reportId, action) => apiClient.patch(`/admin/reports/${reportId}/resolve`, { action }),
+}
+
 export const ConfigAPI = {
   bookingPolicy: () => apiClient.get('/admin/config/booking-policy'),
   fieldOptions: () => apiClient.get('/admin/field-options'),

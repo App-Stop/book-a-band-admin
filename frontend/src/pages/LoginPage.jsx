@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Lock, Mail, Music4, ShieldCheck } from 'lucide-react'
+import { Lock, Mail, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { Button, Field, TextInput } from '../components/ui'
 
@@ -33,7 +33,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <div className="mb-8 flex flex-col items-center text-center">
           <div className="brand-gradient mb-4 flex h-14 w-14 items-center justify-center rounded-2xl shadow-xl shadow-brand-600/30">
-            <Music4 className="h-7 w-7 text-white" />
+            <img src="/Vector.png" alt="" className="h-7 w-7 object-contain" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-white">
             Book<span className="gradient-text">A</span>Band

@@ -10,6 +10,7 @@ import BookingsPage from './pages/BookingsPage'
 import PayoutsPage from './pages/PayoutsPage'
 import OpenRequestsPage from './pages/OpenRequestsPage'
 import PostsPage from './pages/PostsPage'
+import ReportsPage from './pages/ReportsPage'
 import BandPackagesPage from './pages/BandPackagesPage'
 import SupportMessagesPage from './pages/SupportMessagesPage'
 import BandAnalyticsPage from './pages/BandAnalyticsPage'
@@ -41,6 +42,7 @@ export default function App() {
           <Route path="/payouts" element={<PayoutsPage />} />
           <Route path="/open-requests" element={<OpenRequestsPage />} />
           <Route path="/posts" element={<PostsPage />} />
+          <Route path="/reports" element={<ReportsPage />} />
           <Route path="/band-packages" element={<BandPackagesPage />} />
           <Route path="/support-messages" element={<SupportMessagesPage />} />
           <Route path="/analytics" element={<BandAnalyticsPage />} />

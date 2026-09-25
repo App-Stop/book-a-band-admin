@@ -14,7 +14,7 @@ import {
   LogOut,
   Menu,
   X,
-  Music4,
+  Flag,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useAuth } from '../context/AuthContext'
@@ -28,6 +28,7 @@ const NAV_ITEMS = [
   { to: '/payouts', label: 'Payouts', icon: Wallet },
   { to: '/open-requests', label: 'Open Requests', icon: Inbox },
   { to: '/posts', label: 'Posts & Comments', icon: MessagesSquare },
+  { to: '/reports', label: 'Reports', icon: Flag },
   { to: '/band-packages', label: 'Band Packages', icon: Package },
   { to: '/support-messages', label: 'Support', icon: LifeBuoy },
   { to: '/analytics', label: 'Band Analytics', icon: BarChart3 },
@@ -64,7 +65,7 @@ function Brand() {
   return (
     <div className="flex items-center gap-2.5 px-5 py-5">
       <div className="brand-gradient flex h-9 w-9 items-center justify-center rounded-xl shadow-lg shadow-brand-600/30">
-        <Music4 className="h-5 w-5 text-white" />
+        <img src="/Vector.png" alt="" className="h-5 w-5 object-contain" />
       </div>
       <div className="min-w-0">
         <p className="truncate text-sm font-bold tracking-tight text-white">BookABand</p>

@@ -8,11 +8,21 @@ import {
   MessagesSquare,
   Package,
   LifeBuoy,
+  Flag,
   ArrowUpRight,
 } from 'lucide-react'
 import { AdminLayout } from '../components/layout'
 import { Card, StatCard, ErrorState, Spinner } from '../components/ui'
-import { BandPackagesAPI, BookingsAPI, OpenRequestsAPI, PayoutsAPI, PostsAPI, SupportMessagesAPI, UsersAPI } from '../lib/api'
+import {
+  BandPackagesAPI,
+  BookingsAPI,
+  OpenRequestsAPI,
+  PayoutsAPI,
+  PostsAPI,
+  ReportsAPI,
+  SupportMessagesAPI,
+  UsersAPI,
+} from '../lib/api'
 import { formatNumber } from '../lib/formatters'
 
 const SECTIONS = [
@@ -21,6 +31,7 @@ const SECTIONS = [
   { key: 'payouts', label: 'Total Payouts', icon: Wallet, accent: 'success', to: '/payouts' },
   { key: 'openRequests', label: 'Open Requests', icon: Inbox, accent: 'warning', to: '/open-requests' },
   { key: 'posts', label: 'Total Posts', icon: MessagesSquare, accent: 'info', to: '/posts' },
+  { key: 'pendingReports', label: 'Pending Reports', icon: Flag, accent: 'warning', to: '/reports' },
   { key: 'bandPackages', label: 'Band Packages', icon: Package, accent: 'brand', to: '/band-packages' },
   { key: 'supportMessages', label: 'Support Messages', icon: LifeBuoy, accent: 'accent', to: '/support-messages' },
 ]
@@ -37,12 +48,13 @@ export default function DashboardPage() {
       setLoading(true)
       setError('')
       try {
-        const [users, bookings, payouts, openRequests, posts, bandPackages, supportMessages] = await Promise.all([
+        const [users, bookings, payouts, openRequests, posts, pendingReports, bandPackages, supportMessages] = await Promise.all([
           UsersAPI.list({ limit: 1 }),
           BookingsAPI.list({ limit: 1 }),
           PayoutsAPI.list({ limit: 1 }),
           OpenRequestsAPI.list({ limit: 1 }),
           PostsAPI.list({ limit: 1 }),
+          ReportsAPI.list({ status: 'pending', limit: 1 }),
           BandPackagesAPI.list({ limit: 1 }),
           SupportMessagesAPI.list({ limit: 1 }),
         ])
@@ -53,6 +65,7 @@ export default function DashboardPage() {
           payouts: payouts?.data?.pagination?.total ?? 0,
           openRequests: openRequests?.data?.pagination?.total ?? 0,
           posts: posts?.data?.pagination?.total ?? 0,
+          pendingReports: pendingReports?.data?.pagination?.total ?? 0,
           bandPackages: bandPackages?.data?.pagination?.total ?? 0,
           supportMessages: supportMessages?.data?.pagination?.total ?? 0,
         })
@@ -95,6 +108,7 @@ export default function DashboardPage() {
                 { label: 'Review open requests', to: '/open-requests', icon: Inbox },
                 { label: 'Check failed payouts', to: '/payouts', icon: Wallet },
                 { label: 'Moderate flagged posts', to: '/posts', icon: MessagesSquare },
+                { label: 'Triage pending reports', to: '/reports', icon: Flag },
                 { label: 'Respond to support', to: '/support-messages', icon: LifeBuoy },
                 { label: 'Look up band analytics', to: '/analytics', icon: Users },
                 { label: 'View platform config', to: '/config', icon: Package },
