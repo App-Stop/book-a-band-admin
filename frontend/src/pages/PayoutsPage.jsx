@@ -186,7 +186,7 @@ function PayoutDetailDrawer({ payoutId, onClose, onChanged }) {
             </Card>
           )}
 
-          <RawPanel data={payout} label="Raw payout record" />
+          {/* <RawPanel data={payout} label="Raw payout record" />*/}
         </div>
       )}
 

@@ -265,7 +265,7 @@ function BookingDetailDrawer({ bookingId, onClose, onChanged }) {
             </Card>
           )}
 
-          <RawPanel data={detail} label="Raw booking record" />
+          {/* <RawPanel data={detail} label="Raw booking record" />*/}
         </div>
       )}
 
