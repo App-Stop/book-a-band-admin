@@ -5,100 +5,109 @@ import {
   CalendarClock,
   Wallet,
   Inbox,
-  MessagesSquare,
-  Package,
-  LifeBuoy,
-  Flag,
+  ShieldAlert,
+  ShieldCheck,
   ArrowUpRight,
+  TrendingUp,
+  Landmark,
 } from 'lucide-react'
 import { AdminLayout } from '../components/layout'
 import { Card, StatCard, ErrorState, Spinner } from '../components/ui'
-import {
-  BandPackagesAPI,
-  BookingsAPI,
-  OpenRequestsAPI,
-  PayoutsAPI,
-  PostsAPI,
-  ReportsAPI,
-  SupportMessagesAPI,
-  UsersAPI,
-} from '../lib/api'
-import { formatNumber } from '../lib/formatters'
+import { DashboardAPI } from '../lib/api'
+import { formatCurrency, formatNumber } from '../lib/formatters'
 
 const SECTIONS = [
   { key: 'users', label: 'Total Users', icon: Users, accent: 'brand', to: '/users' },
   { key: 'bookings', label: 'Total Bookings', icon: CalendarClock, accent: 'accent', to: '/bookings' },
   { key: 'payouts', label: 'Total Payouts', icon: Wallet, accent: 'success', to: '/payouts' },
   { key: 'openRequests', label: 'Open Requests', icon: Inbox, accent: 'warning', to: '/open-requests' },
-  { key: 'posts', label: 'Total Posts', icon: MessagesSquare, accent: 'info', to: '/posts' },
-  { key: 'pendingReports', label: 'Pending Reports', icon: Flag, accent: 'warning', to: '/reports' },
-  { key: 'bandPackages', label: 'Band Packages', icon: Package, accent: 'brand', to: '/band-packages' },
-  { key: 'supportMessages', label: 'Support Messages', icon: LifeBuoy, accent: 'accent', to: '/support-messages' },
+  { key: 'openDisputes', label: 'Open Disputes', icon: ShieldAlert, accent: 'warning', to: '/disputes' },
+  { key: 'pendingReports', label: 'Pending Reports', icon: ShieldCheck, accent: 'info', to: '/moderation' },
 ]
 
 export default function DashboardPage() {
   const navigate = useNavigate()
-  const [counts, setCounts] = useState(null)
+  const [summary, setSummary] = useState(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
-    async function load() {
-      setLoading(true)
-      setError('')
-      try {
-        const [users, bookings, payouts, openRequests, posts, pendingReports, bandPackages, supportMessages] = await Promise.all([
-          UsersAPI.list({ limit: 1 }),
-          BookingsAPI.list({ limit: 1 }),
-          PayoutsAPI.list({ limit: 1 }),
-          OpenRequestsAPI.list({ limit: 1 }),
-          PostsAPI.list({ limit: 1 }),
-          ReportsAPI.list({ status: 'pending', limit: 1 }),
-          BandPackagesAPI.list({ limit: 1 }),
-          SupportMessagesAPI.list({ limit: 1 }),
-        ])
-        if (cancelled) return
-        setCounts({
-          users: users?.data?.pagination?.total ?? 0,
-          bookings: bookings?.data?.pagination?.total ?? 0,
-          payouts: payouts?.data?.pagination?.total ?? 0,
-          openRequests: openRequests?.data?.pagination?.total ?? 0,
-          posts: posts?.data?.pagination?.total ?? 0,
-          pendingReports: pendingReports?.data?.pagination?.total ?? 0,
-          bandPackages: bandPackages?.data?.pagination?.total ?? 0,
-          supportMessages: supportMessages?.data?.pagination?.total ?? 0,
-        })
-      } catch (err) {
+    DashboardAPI.summary()
+      .then((res) => {
+        if (!cancelled) setSummary(res.data)
+      })
+      .catch((err) => {
         if (!cancelled) setError(err?.message || 'Failed to load dashboard data.')
-      } finally {
+      })
+      .finally(() => {
         if (!cancelled) setLoading(false)
-      }
-    }
-    load()
+      })
     return () => {
       cancelled = true
     }
   }, [])
 
+  const counts = summary?.counts
+  const revenue = summary?.revenue
+  const escrow = summary?.escrow
+
   return (
     <AdminLayout title="Dashboard" description="Platform overview at a glance">
-      {loading && !counts && (
+      {loading && !summary && (
         <div className="flex justify-center py-16">
           <Spinner className="h-6 w-6" />
         </div>
       )}
 
-      {error && !counts && <ErrorState message={error} />}
+      {error && !summary && <ErrorState message={error} />}
 
-      {counts && (
+      {summary && (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {SECTIONS.map((s) => (
               <button key={s.key} type="button" onClick={() => navigate(s.to)} className="text-left">
-                <StatCard icon={s.icon} label={s.label} value={formatNumber(counts[s.key])} accent={s.accent} />
+                <StatCard icon={s.icon} label={s.label} value={formatNumber(counts?.[s.key])} accent={s.accent} />
               </button>
             ))}
+          </div>
+
+          <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <Card className="p-5">
+              <div className="mb-4 flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-success-400" />
+                <h3 className="text-sm font-semibold text-slate-200">Platform revenue</h3>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <Metric label="All time" value={formatCurrency(revenue?.platformRevenueAllTime)} />
+                <Metric label="This month" value={formatCurrency(revenue?.platformRevenueThisMonth)} />
+              </div>
+              <p className="mt-3 text-xs text-slate-500">
+                Realized revenue: platform fee on payouts that have actually transferred to a band.
+              </p>
+            </Card>
+
+            <Card className="p-5">
+              <div className="mb-4 flex items-center gap-2">
+                <Landmark className="h-4 w-4 text-warning-400" />
+                <h3 className="text-sm font-semibold text-slate-200">Escrow</h3>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <Metric
+                  label="Owed to bands"
+                  value={formatCurrency(escrow?.owedToBands?.amount)}
+                  hint={`${formatNumber(escrow?.owedToBands?.payoutCount)} payouts`}
+                />
+                <Metric
+                  label="Held for upcoming events"
+                  value={formatCurrency(escrow?.heldForUpcomingEvents?.amount)}
+                  hint={`${formatNumber(escrow?.heldForUpcomingEvents?.paymentCount)} payments`}
+                />
+              </div>
+              <p className="mt-3 text-xs text-slate-500">
+                Money already collected for bookings that haven&apos;t completed yet.
+              </p>
+            </Card>
           </div>
 
           <Card className="mt-6 p-5">
@@ -107,11 +116,10 @@ export default function DashboardPage() {
               {[
                 { label: 'Review open requests', to: '/open-requests', icon: Inbox },
                 { label: 'Check failed payouts', to: '/payouts', icon: Wallet },
-                { label: 'Moderate flagged posts', to: '/posts', icon: MessagesSquare },
-                { label: 'Triage pending reports', to: '/reports', icon: Flag },
-                { label: 'Respond to support', to: '/support-messages', icon: LifeBuoy },
-                { label: 'Look up band analytics', to: '/analytics', icon: Users },
-                { label: 'View platform config', to: '/config', icon: Package },
+                { label: 'Triage open disputes', to: '/disputes', icon: ShieldAlert },
+                { label: 'Moderate reports & support', to: '/moderation', icon: ShieldCheck },
+                { label: 'Look up users & bands', to: '/users', icon: Users },
+                { label: 'View platform config', to: '/config', icon: ShieldCheck },
               ].map((action) => (
                 <button
                   key={action.label}
@@ -131,5 +139,15 @@ export default function DashboardPage() {
         </>
       )}
     </AdminLayout>
+  )
+}
+
+function Metric({ label, value, hint }) {
+  return (
+    <div>
+      <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
+      <p className="mt-0.5 text-lg font-semibold text-white">{value}</p>
+      {hint && <p className="text-xs text-slate-500">{hint}</p>}
+    </div>
   )
 }

@@ -12,19 +12,20 @@ import {
   LoadingBlock,
   Pagination,
   SectionTitle,
+  Select,
   StatusBadge,
-  SuggestInput,
   Table,
   TextInput,
 } from '../components/ui'
 import { PayoutsAPI } from '../lib/api'
 import { useToast } from '../context/ToastContext'
-import { formatCurrency, formatDate, formatDateTime } from '../lib/formatters'
+import { formatCurrency, formatDate, formatDateTime, titleCase } from '../lib/formatters'
 
-const STATUS_SUGGESTIONS = ['pending', 'processing', 'paid', 'failed', 'waiting_onboarding', 'cancelled']
+const STATUS_OPTIONS = ['pending', 'processing', 'paid', 'failed', 'waiting_onboarding', 'cancelled']
+const NEEDS_ACTION_STATUS = 'failed,waiting_onboarding'
 
 export default function PayoutsPage() {
-  const [filters, setFilters] = useState({ status: '', band: '', bandLabel: '', from: '', to: '' })
+  const [filters, setFilters] = useState({ status: NEEDS_ACTION_STATUS, band: '', bandLabel: '', from: '', to: '' })
   const [page, setPage] = useState(1)
   const limit = 20
   const [data, setData] = useState(null)
@@ -55,7 +56,7 @@ export default function PayoutsPage() {
     { key: 'band', header: 'Band', render: (p) => p.band?.fullName || '—' },
     { key: 'event', header: 'Event', render: (p) => p.booking?.city || '—' },
     { key: 'eventDate', header: 'Event date', render: (p) => formatDate(p.booking?.eventDate) },
-    { key: 'amount', header: 'Amount', render: (p) => formatCurrency(p.amount) },
+    { key: 'amount', header: 'Amount', render: (p) => formatCurrency(p.payoutAmount) },
     { key: 'status', header: 'Status', render: (p) => <StatusBadge status={p.status} /> },
     { key: 'created', header: 'Created', render: (p) => formatDate(p.createdAt) },
   ]
@@ -64,12 +65,15 @@ export default function PayoutsPage() {
     <AdminLayout title="Payouts" description="Track and retry band payouts">
       <Card className="mb-4 p-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <SuggestInput
-            suggestions={STATUS_SUGGESTIONS}
-            placeholder="Status (e.g. failed)"
-            value={filters.status}
-            onChange={(e) => updateFilter('status', e.target.value)}
-          />
+          <Select value={filters.status} onChange={(e) => updateFilter('status', e.target.value)}>
+            <option value={NEEDS_ACTION_STATUS}>Needs action (failed / waiting onboarding)</option>
+            <option value="">All payouts</option>
+            {STATUS_OPTIONS.map((s) => (
+              <option key={s} value={s}>
+                {titleCase(s)} only
+              </option>
+            ))}
+          </Select>
           <EntitySearchSelect
             role="band"
             placeholder="Search band name…"
@@ -174,7 +178,7 @@ function PayoutDetailDrawer({ payoutId, onClose, onChanged }) {
           <Card className="p-4">
             <KeyValue label="Payout ID" value={payout._id} mono />
             <KeyValue label="Band" value={payout.band?.fullName} />
-            <KeyValue label="Amount" value={formatCurrency(payout.amount)} />
+            <KeyValue label="Amount" value={formatCurrency(payout.payoutAmount)} />
             <KeyValue label="Created" value={formatDateTime(payout.createdAt)} />
           </Card>
 
@@ -191,7 +195,7 @@ function PayoutDetailDrawer({ payoutId, onClose, onChanged }) {
           {payout.payment && (
             <Card className="p-4">
               <SectionTitle>Payment</SectionTitle>
-              <KeyValue label="Amount" value={formatCurrency(payout.payment.amount)} />
+              <KeyValue label="Amount" value={formatCurrency(payout.payment.totalAmount)} />
               <KeyValue label="Status" value={<StatusBadge status={payout.payment.status} />} />
             </Card>
           )}

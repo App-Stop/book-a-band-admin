@@ -9,11 +9,8 @@ import UsersPage from './pages/UsersPage'
 import BookingsPage from './pages/BookingsPage'
 import PayoutsPage from './pages/PayoutsPage'
 import OpenRequestsPage from './pages/OpenRequestsPage'
-import PostsPage from './pages/PostsPage'
-import ReportsPage from './pages/ReportsPage'
-import BandPackagesPage from './pages/BandPackagesPage'
-import SupportMessagesPage from './pages/SupportMessagesPage'
-import BandAnalyticsPage from './pages/BandAnalyticsPage'
+import DisputesPage from './pages/DisputesPage'
+import ModerationPage from './pages/ModerationPage'
 import ConfigPage from './pages/ConfigPage'
 import NotFoundPage from './pages/NotFoundPage'
 
@@ -41,11 +38,8 @@ export default function App() {
           <Route path="/bookings" element={<BookingsPage />} />
           <Route path="/payouts" element={<PayoutsPage />} />
           <Route path="/open-requests" element={<OpenRequestsPage />} />
-          <Route path="/posts" element={<PostsPage />} />
-          <Route path="/reports" element={<ReportsPage />} />
-          <Route path="/band-packages" element={<BandPackagesPage />} />
-          <Route path="/support-messages" element={<SupportMessagesPage />} />
-          <Route path="/analytics" element={<BandAnalyticsPage />} />
+          <Route path="/disputes" element={<DisputesPage />} />
+          <Route path="/moderation" element={<ModerationPage />} />
           <Route path="/config" element={<ConfigPage />} />
         </Route>
 

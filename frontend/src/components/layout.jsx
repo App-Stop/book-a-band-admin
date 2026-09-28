@@ -6,15 +6,12 @@ import {
   CalendarClock,
   Wallet,
   Inbox,
-  MessagesSquare,
-  Package,
-  LifeBuoy,
-  BarChart3,
+  ShieldAlert,
+  ShieldCheck,
   Settings,
   LogOut,
   Menu,
   X,
-  Flag,
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useAuth } from '../context/AuthContext'
@@ -25,14 +22,10 @@ const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/users', label: 'Users & Bands', icon: Users },
   { to: '/bookings', label: 'Bookings', icon: CalendarClock },
-  { to: '/payouts', label: 'Payouts', icon: Wallet },
+  { to: '/disputes', label: 'Disputes', icon: ShieldAlert },
   { to: '/open-requests', label: 'Open Requests', icon: Inbox },
-  { to: '/posts', label: 'Posts & Comments', icon: MessagesSquare },
-  { to: '/reports', label: 'Reports', icon: Flag },
-  { to: '/band-packages', label: 'Band Packages', icon: Package },
-  { to: '/support-messages', label: 'Support', icon: LifeBuoy },
-  { to: '/analytics', label: 'Band Analytics', icon: BarChart3 },
-  { to: '/config', label: 'Platform Config', icon: Settings },
+  { to: '/moderation', label: 'Moderation', icon: ShieldCheck },
+  { to: '/payouts', label: 'Payouts', icon: Wallet },
 ]
 
 function NavList({ onNavigate }) {
@@ -75,12 +68,25 @@ function Brand() {
   )
 }
 
-function UserMenu() {
+function UserMenu({ onNavigate }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
 
   return (
     <div className="border-t border-white/8 p-3">
+      <NavLink
+        to="/config"
+        onClick={onNavigate}
+        className={({ isActive }) =>
+          clsx(
+            'focus-ring mb-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition',
+            isActive ? 'brand-gradient text-white shadow-lg shadow-brand-600/20' : 'text-slate-400 hover:bg-white/5 hover:text-slate-100',
+          )
+        }
+      >
+        <Settings className="h-4.5 w-4.5 shrink-0" />
+        <span className="truncate">Settings</span>
+      </NavLink>
       <div className="glass-card flex items-center gap-3 rounded-xl p-2.5">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-accent-500 text-xs font-semibold text-white">
           {initials(user?.fullName || user?.email)}
@@ -128,7 +134,7 @@ export function AdminLayout({ children, title, description, actions }) {
               </IconButton>
             </div>
             <NavList onNavigate={() => setMobileOpen(false)} />
-            <UserMenu />
+            <UserMenu onNavigate={() => setMobileOpen(false)} />
           </aside>
         </div>
       )}

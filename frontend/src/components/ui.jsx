@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronLeft, ChevronRight, Loader2, Search, X } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, Loader2, Search, X } from 'lucide-react'
 import { clsx } from 'clsx'
 import { formatCurrency, formatDateTime, formatNumber, titleCase, toDate } from '../lib/formatters'
 import { UsersAPI } from '../lib/api'
@@ -99,9 +99,18 @@ export function StatCard({ icon: Icon, label, value, hint, accent = 'brand' }) {
 /* ---------------------------- Status badge --------------------------- */
 
 const STATUS_MAP = {
-  success: ['confirmed', 'accepted', 'completed', 'resolved', 'active', 'won', 'closed_won', 'verified', 'paid'],
-  danger: ['cancelled', 'declined', 'failed', 'expired', 'rejected', 'suspended', 'deleted', 'disputed'],
-  warning: ['pending', 'waiting_onboarding', 'processing', 'in_progress', 'open', 'review'],
+  success: ['confirmed', 'accepted', 'completed', 'resolved', 'active', 'won', 'closed_won', 'verified', 'paid', 'paid_out'],
+  danger: ['cancelled', 'declined', 'failed', 'expired', 'rejected', 'suspended', 'deleted', 'disputed', 'refunded'],
+  warning: [
+    'pending',
+    'pending_payment',
+    'waiting_onboarding',
+    'processing',
+    'in_progress',
+    'open',
+    'review',
+    'holding_funds',
+  ],
   info: ['new', 'unread'],
 }
 
@@ -183,18 +192,21 @@ export function SuggestInput({ suggestions = [], className, ...props }) {
 
 export const Select = forwardRef(function Select({ className, children, style, ...props }, ref) {
   return (
-    <select
-      ref={ref}
-      style={{ colorScheme: 'dark', ...style }}
-      className={clsx(
-        'focus-ring w-full appearance-none rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2 text-sm text-slate-100',
-        '[&>option]:bg-[#160e2b] [&>option]:text-slate-100',
-        className,
-      )}
-      {...props}
-    >
-      {children}
-    </select>
+    <div className="relative">
+      <select
+        ref={ref}
+        style={{ colorScheme: 'dark', ...style }}
+        className={clsx(
+          'focus-ring w-full cursor-pointer appearance-none rounded-xl border border-white/10 bg-white/[0.03] py-2 pl-3.5 pr-9 text-sm text-slate-100 transition hover:bg-white/[0.06]',
+          '[&>option]:bg-[#160e2b] [&>option]:text-slate-100',
+          className,
+        )}
+        {...props}
+      >
+        {children}
+      </select>
+      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+    </div>
   )
 })
 

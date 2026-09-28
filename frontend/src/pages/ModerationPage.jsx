@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Flag, ShieldCheck, Trash2 } from 'lucide-react'
+import { Flag, LifeBuoy, Save, ShieldCheck, Trash2 } from 'lucide-react'
 import { AdminLayout } from '../components/layout'
 import {
   AutoFields,
@@ -9,20 +9,26 @@ import {
   ConfirmDialog,
   Drawer,
   EmptyState,
+  Field,
   KeyValue,
+  LoadingBlock,
   Pagination,
+  SearchInput,
   Select,
   StatusBadge,
   Table,
+  Tabs,
+  Textarea,
 } from '../components/ui'
-import { ReportsAPI } from '../lib/api'
+import { ReportsAPI, SupportMessagesAPI } from '../lib/api'
 import { useToast } from '../context/ToastContext'
 import { formatDateTime, titleCase } from '../lib/formatters'
 
-const STATUS_OPTIONS = ['pending', 'resolved', 'dismissed', 'all']
-const TYPE_OPTIONS = ['review', 'post', 'comment']
-
+const REPORT_STATUS_OPTIONS = ['pending', 'resolved', 'dismissed', 'all']
+const REPORT_TYPE_OPTIONS = ['review', 'post', 'comment']
 const TYPE_TONE = { review: 'warning', post: 'info', comment: 'neutral' }
+
+const SUPPORT_STATUS_OPTIONS = ['new', 'pending', 'in_progress', 'resolved', 'closed']
 
 const REPORT_KNOWN_KEYS = ['_id', '__v', 'type', 'status', 'targetId', 'reportedBy', 'resolvedBy', 'createdAt', 'updatedAt', 'resolvedAt']
 const TARGET_KNOWN_KEYS = ['_id', '__v', 'caption', 'comment', 'text', 'content', 'rating', 'band', 'user', 'createdAt', 'updatedAt']
@@ -39,7 +45,29 @@ function getContentPreview(report) {
   return t.caption || t.text || t.comment || '—'
 }
 
-export default function ReportsPage() {
+export default function ModerationPage() {
+  const [tab, setTab] = useState('reports')
+  const [reportsPendingCount, setReportsPendingCount] = useState(null)
+
+  const tabs = [
+    { key: 'reports', label: 'Reports', count: reportsPendingCount ?? undefined },
+    { key: 'support', label: 'Support Tickets' },
+  ]
+
+  return (
+    <AdminLayout title="Moderation" description="Triage user-reported content and incoming support tickets">
+      <div className="mb-4">
+        <Tabs tabs={tabs} active={tab} onChange={setTab} />
+      </div>
+      {tab === 'reports' && <ReportsTab onPendingCount={setReportsPendingCount} />}
+      {tab === 'support' && <SupportTab />}
+    </AdminLayout>
+  )
+}
+
+/* -------------------------------- Reports -------------------------------- */
+
+function ReportsTab({ onPendingCount }) {
   const [filters, setFilters] = useState({ status: 'pending', type: '' })
   const [page, setPage] = useState(1)
   const limit = 20
@@ -55,10 +83,11 @@ export default function ReportsPage() {
       .then((res) => {
         const items = res.data?.items || res.data?.reports || []
         setData({ items, pagination: res.data?.pagination })
+        if (filters.status === 'pending') onPendingCount?.(res.data?.pagination?.total)
       })
       .catch((err) => setError(err?.message || 'Failed to load reports.'))
       .finally(() => setLoading(false))
-  }, [filters, page])
+  }, [filters, page, onPendingCount])
 
   useEffect(() => {
     fetchList()
@@ -74,10 +103,17 @@ export default function ReportsPage() {
 
   const columns = [
     { key: 'type', header: 'Type', render: (r) => <Badge tone={TYPE_TONE[r.type] || 'neutral'}>{titleCase(r.type)}</Badge> },
-    { key: 'content', header: 'Reported content', className: 'max-w-sm truncate', render: (r) => getContentPreview(r) },
+    {
+      key: 'content',
+      header: 'Reported content',
+      className: 'max-w-[160px] truncate sm:max-w-[220px] lg:max-w-sm',
+      render: (r) => getContentPreview(r),
+    },
     {
       key: 'reportedBy',
       header: 'Reported by',
+      headClassName: 'hidden md:table-cell',
+      className: 'hidden md:table-cell',
       render: (r) => (
         <div>
           <p className="text-sm font-medium text-slate-100">{r.reportedBy?.fullName || '—'}</p>
@@ -85,16 +121,22 @@ export default function ReportsPage() {
         </div>
       ),
     },
-    { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
-    { key: 'created', header: 'Reported', render: (r) => formatDateTime(r.createdAt) },
+    { key: 'status', header: 'Status', className: 'whitespace-nowrap', render: (r) => <StatusBadge status={r.status} /> },
+    {
+      key: 'created',
+      header: 'Reported',
+      headClassName: 'hidden lg:table-cell',
+      className: 'hidden whitespace-nowrap lg:table-cell',
+      render: (r) => formatDateTime(r.createdAt),
+    },
   ]
 
   return (
-    <AdminLayout title="Reports" description="Triage user-reported reviews, posts, and comments">
+    <>
       <Card className="mb-4 p-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Select value={filters.status} onChange={(e) => updateFilter('status', e.target.value)}>
-            {STATUS_OPTIONS.map((s) => (
+            {REPORT_STATUS_OPTIONS.map((s) => (
               <option key={s} value={s === 'all' ? '' : s}>
                 {s === 'all' ? 'All statuses' : titleCase(s)}
               </option>
@@ -102,7 +144,7 @@ export default function ReportsPage() {
           </Select>
           <Select value={filters.type} onChange={(e) => updateFilter('type', e.target.value)}>
             <option value="">All types</option>
-            {TYPE_OPTIONS.map((t) => (
+            {REPORT_TYPE_OPTIONS.map((t) => (
               <option key={t} value={t}>
                 {titleCase(t)}
               </option>
@@ -136,7 +178,7 @@ export default function ReportsPage() {
       {selectedReport && (
         <ReportDetailDrawer report={selectedReport} onClose={() => setSelectedId(null)} onResolved={fetchList} />
       )}
-    </AdminLayout>
+    </>
   )
 }
 
@@ -248,6 +290,190 @@ function ReportDetailDrawer({ report, onClose, onResolved }) {
         confirmLabel="Dismiss report"
         loading={busy}
       />
+    </Drawer>
+  )
+}
+
+/* -------------------------------- Support -------------------------------- */
+
+function SupportTab() {
+  const [filters, setFilters] = useState({ status: '', search: '' })
+  const [page, setPage] = useState(1)
+  const limit = 20
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [selectedId, setSelectedId] = useState(null)
+
+  const fetchList = useCallback(() => {
+    setLoading(true)
+    setError('')
+    SupportMessagesAPI.list({ ...filters, page, limit })
+      .then((res) => setData(res.data))
+      .catch((err) => setError(err?.message || 'Failed to load support messages.'))
+      .finally(() => setLoading(false))
+  }, [filters, page])
+
+  useEffect(() => {
+    fetchList()
+  }, [fetchList])
+
+  function updateFilter(key, value) {
+    setPage(1)
+    setFilters((f) => ({ ...f, [key]: value }))
+  }
+
+  const columns = [
+    {
+      key: 'from',
+      header: 'From',
+      render: (m) => (
+        <div>
+          <p className="text-sm font-medium text-slate-100">{m.name || '—'}</p>
+          <p className="text-xs text-slate-500">{m.email}</p>
+        </div>
+      ),
+    },
+    { key: 'message', header: 'Message', className: 'max-w-sm truncate', render: (m) => m.message },
+    { key: 'status', header: 'Status', render: (m) => <StatusBadge status={m.status} /> },
+    { key: 'created', header: 'Received', render: (m) => formatDateTime(m.createdAt) },
+  ]
+
+  return (
+    <>
+      <Card className="mb-4 p-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <SearchInput placeholder="Search name, email, message…" value={filters.search} onChange={(e) => updateFilter('search', e.target.value)} />
+          <Select value={filters.status} onChange={(e) => updateFilter('status', e.target.value)}>
+            <option value="">All statuses</option>
+            {SUPPORT_STATUS_OPTIONS.map((s) => (
+              <option key={s} value={s}>
+                {titleCase(s)}
+              </option>
+            ))}
+          </Select>
+        </div>
+      </Card>
+
+      <Card>
+        <Table
+          columns={columns}
+          rows={data?.items || []}
+          rowKey={(m) => m._id}
+          loading={loading}
+          onRowClick={(m) => setSelectedId(m._id)}
+          emptyState={<EmptyState icon={LifeBuoy} title="No support messages" description="Try adjusting your filters." />}
+        />
+        {data?.pagination && (
+          <Pagination
+            page={data.pagination.page}
+            totalPages={data.pagination.totalPages}
+            total={data.pagination.total}
+            limit={data.pagination.limit}
+            onPageChange={setPage}
+          />
+        )}
+      </Card>
+
+      {error && !data && <p className="mt-4 text-sm text-danger-400">{error}</p>}
+
+      {selectedId && <SupportMessageDrawer id={selectedId} onClose={() => setSelectedId(null)} onChanged={fetchList} />}
+    </>
+  )
+}
+
+function SupportMessageDrawer({ id, onClose, onChanged }) {
+  const toast = useToast()
+  const [message, setMessage] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [status, setStatus] = useState('')
+  const [adminNote, setAdminNote] = useState('')
+
+  const load = useCallback(() => {
+    setLoading(true)
+    setError('')
+    SupportMessagesAPI.get(id)
+      .then((res) => {
+        setMessage(res.data)
+        setStatus(res.data?.status || '')
+        setAdminNote(res.data?.adminNote || '')
+      })
+      .catch((err) => setError(err?.message || 'Failed to load message.'))
+      .finally(() => setLoading(false))
+  }, [id])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  async function handleSave() {
+    if (!status.trim()) {
+      toast.error('Status is required.')
+      return
+    }
+    setBusy(true)
+    try {
+      await SupportMessagesAPI.updateStatus(id, { status: status.trim(), adminNote: adminNote.trim() || undefined })
+      toast.success('Support message updated.')
+      load()
+      onChanged()
+    } catch (err) {
+      toast.error(err?.message || 'Failed to update message.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Drawer
+      open
+      onClose={onClose}
+      title={message?.name || 'Support message'}
+      subtitle={message?.email}
+      footer={
+        message && (
+          <Button onClick={handleSave} loading={busy}>
+            <Save className="h-4 w-4" /> Save status
+          </Button>
+        )
+      }
+    >
+      {loading && <LoadingBlock />}
+      {error && !loading && <p className="text-sm text-danger-400">{error}</p>}
+
+      {message && (
+        <div className="space-y-5">
+          <StatusBadge status={message.status} />
+
+          <Card className="p-4">
+            <KeyValue label="Name" value={message.name} />
+            <KeyValue label="Email" value={message.email} />
+            <KeyValue label="Received" value={formatDateTime(message.createdAt)} />
+          </Card>
+
+          <Card className="p-4">
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">Message</p>
+            <p className="whitespace-pre-wrap text-sm text-slate-200">{message.message}</p>
+          </Card>
+
+          <Card className="space-y-3 p-4">
+            <Field label="Status">
+              <Select value={status} onChange={(e) => setStatus(e.target.value)}>
+                {SUPPORT_STATUS_OPTIONS.map((s) => (
+                  <option key={s} value={s}>
+                    {titleCase(s)}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Admin note (optional)">
+              <Textarea rows={3} value={adminNote} onChange={(e) => setAdminNote(e.target.value)} placeholder="Internal note about this message…" />
+            </Field>
+          </Card>
+        </div>
+      )}
     </Drawer>
   )
 }

@@ -12,6 +12,7 @@ import {
   KeyValue,
   LoadingBlock,
   Pagination,
+  SearchInput,
   SectionTitle,
   Select,
   StatusBadge,
@@ -21,12 +22,34 @@ import {
 } from '../components/ui'
 import { BookingsAPI } from '../lib/api'
 import { useToast } from '../context/ToastContext'
-import { formatCurrency, formatDate, formatDateTime } from '../lib/formatters'
+import { formatCurrency, formatDate, formatDateTime, titleCase } from '../lib/formatters'
 
-const STATUS_OPTIONS = ['pending', 'confirmed', 'completed', 'cancelled', 'expired']
+const STATUS_OPTIONS = [
+  'pending_payment',
+  'confirmed',
+  'in_progress',
+  'completed',
+  'holding_funds',
+  'paid_out',
+  'disputed',
+  'cancelled',
+  'refunded',
+  'expired',
+]
 
 export default function BookingsPage() {
-  const [filters, setFilters] = useState({ status: '', band: '', bandLabel: '', user: '', userLabel: '', from: '', to: '' })
+  const [filters, setFilters] = useState({
+    status: '',
+    band: '',
+    bandLabel: '',
+    user: '',
+    userLabel: '',
+    from: '',
+    to: '',
+    eventFrom: '',
+    eventTo: '',
+    search: '',
+  })
   const [page, setPage] = useState(1)
   const limit = 20
   const [data, setData] = useState(null)
@@ -65,20 +88,25 @@ export default function BookingsPage() {
       ),
     },
     { key: 'band', header: 'Band', render: (b) => b.band?.fullName || '—' },
-    { key: 'status', header: 'Status', render: (b) => <StatusBadge status={b.status} /> },
+    { key: 'status', header: 'Status', render: (b) => <StatusBadge status={b.bookingStatus} /> },
     { key: 'eventDate', header: 'Event date', render: (b) => formatDate(b.eventDate) },
     { key: 'created', header: 'Created', render: (b) => formatDate(b.createdAt) },
   ]
 
   return (
     <AdminLayout title="Bookings" description="Monitor and intervene on customer bookings">
-      <Card className="mb-4 p-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <Card className="mb-4 space-y-3 p-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <SearchInput
+            placeholder="Search booking id, customer, band…"
+            value={filters.search}
+            onChange={(e) => updateFilter('search', e.target.value)}
+          />
           <Select value={filters.status} onChange={(e) => updateFilter('status', e.target.value)}>
             <option value="">All statuses</option>
             {STATUS_OPTIONS.map((s) => (
               <option key={s} value={s}>
-                {s}
+                {titleCase(s)}
               </option>
             ))}
           </Select>
@@ -102,8 +130,20 @@ export default function BookingsPage() {
               setFilters((f) => ({ ...f, user: id || '', userLabel: label || '' }))
             }}
           />
-          <TextInput type="date" value={filters.from} onChange={(e) => updateFilter('from', e.target.value)} />
-          <TextInput type="date" value={filters.to} onChange={(e) => updateFilter('to', e.target.value)} />
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Field label="Created from">
+            <TextInput type="date" value={filters.from} onChange={(e) => updateFilter('from', e.target.value)} />
+          </Field>
+          <Field label="Created to">
+            <TextInput type="date" value={filters.to} onChange={(e) => updateFilter('to', e.target.value)} />
+          </Field>
+          <Field label="Event from">
+            <TextInput type="date" value={filters.eventFrom} onChange={(e) => updateFilter('eventFrom', e.target.value)} />
+          </Field>
+          <Field label="Event to">
+            <TextInput type="date" value={filters.eventTo} onChange={(e) => updateFilter('eventTo', e.target.value)} />
+          </Field>
         </div>
       </Card>
 
@@ -190,8 +230,8 @@ function BookingDetailDrawer({ bookingId, onClose, onChanged }) {
     }
   }
 
-  const canCancel = booking && !['cancelled', 'completed', 'expired'].includes(booking.status)
-  const canComplete = booking?.status === 'confirmed'
+  const canCancel = booking && !['cancelled', 'completed', 'expired', 'paid_out', 'refunded'].includes(booking.bookingStatus)
+  const canComplete = booking?.bookingStatus === 'confirmed'
 
   return (
     <Drawer
@@ -222,7 +262,7 @@ function BookingDetailDrawer({ bookingId, onClose, onChanged }) {
       {booking && (
         <div className="space-y-5">
           <div className="flex items-center gap-2">
-            <StatusBadge status={booking.status} />
+            <StatusBadge status={booking.bookingStatus} />
           </div>
 
           <Card className="p-4">
@@ -239,7 +279,7 @@ function BookingDetailDrawer({ bookingId, onClose, onChanged }) {
           {detail.payment && (
             <Card className="p-4">
               <SectionTitle>Payment</SectionTitle>
-              <KeyValue label="Amount" value={formatCurrency(detail.payment.amount)} />
+              <KeyValue label="Amount" value={formatCurrency(detail.payment.totalAmount)} />
               <KeyValue label="Status" value={<StatusBadge status={detail.payment.status} />} />
               <KeyValue label="Payment ID" value={detail.payment._id} mono />
             </Card>
@@ -248,7 +288,7 @@ function BookingDetailDrawer({ bookingId, onClose, onChanged }) {
           {detail.payout && (
             <Card className="p-4">
               <SectionTitle>Payout</SectionTitle>
-              <KeyValue label="Amount" value={formatCurrency(detail.payout.amount)} />
+              <KeyValue label="Amount" value={formatCurrency(detail.payout.payoutAmount)} />
               <KeyValue label="Status" value={<StatusBadge status={detail.payout.status} />} />
               <KeyValue label="Payout ID" value={detail.payout._id} mono />
             </Card>

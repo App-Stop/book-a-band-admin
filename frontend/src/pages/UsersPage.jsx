@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Users as UsersIcon, ShieldCheck, UserCog, Ban, RotateCcw } from 'lucide-react'
+import { Users as UsersIcon, ShieldCheck, UserCog, Ban, RotateCcw, Trash2 } from 'lucide-react'
 import { AdminLayout } from '../components/layout'
 import {
   Badge,
@@ -14,7 +14,6 @@ import {
   LoadingBlock,
   Modal,
   Pagination,
-  RawPanel,
   SearchInput,
   Select,
   StatusBadge,
@@ -22,9 +21,9 @@ import {
   Tabs,
   Textarea,
 } from '../components/ui'
-import { UsersAPI } from '../lib/api'
+import { BandPackagesAPI, PostsAPI, UsersAPI } from '../lib/api'
 import { useToast } from '../context/ToastContext'
-import { formatCurrency, formatDate, formatDateTime, initials, titleCase } from '../lib/formatters'
+import { formatCurrency, formatDate, formatDateTime, formatNumber, initials, titleCase } from '../lib/formatters'
 
 const ROLE_OPTIONS = ['user', 'band', 'admin']
 
@@ -65,7 +64,14 @@ export default function UsersPage() {
             {initials(u.fullName || u.email)}
           </div>
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-slate-100">{u.fullName || 'Unnamed'}</p>
+            <div className="flex items-center gap-1.5">
+              <p className="truncate text-sm font-medium text-slate-100">{u.bandProfile?.fullName || u.fullName || 'Unnamed'}</p>
+              {u.bandProfile && (
+                <Badge tone="info" className="shrink-0">
+                  Band
+                </Badge>
+              )}
+            </div>
             <p className="truncate text-xs text-slate-500">{u.email}</p>
           </div>
         </div>
@@ -256,12 +262,19 @@ function UserDetailDrawer({ userId, onClose, onChanged }) {
     }))
   }
 
+  const counts = detail?.counts || {}
+  const isBand = Boolean(detail?.band)
+
   const tabs = [
     { key: 'overview', label: 'Overview' },
-    { key: 'bookings', label: 'Bookings', count: detail?.bookings?.length },
-    { key: 'payments', label: 'Payments', count: detail?.payments?.length },
-    { key: 'disputes', label: 'Disputes', count: detail?.disputes?.length },
-    { key: 'availability', label: 'Requests', count: detail?.availabilityRequests?.length },
+    { key: 'bookings', label: 'Bookings', count: counts.bookings ?? detail?.bookings?.length },
+    { key: 'payments', label: 'Payments', count: counts.payments ?? detail?.payments?.length },
+    ...(isBand ? [{ key: 'payouts', label: 'Payouts', count: counts.payouts ?? detail?.payouts?.length }] : []),
+    ...(isBand ? [{ key: 'packages', label: 'Packages', count: counts.packages ?? detail?.packages?.length }] : []),
+    ...(isBand ? [{ key: 'reviews', label: 'Reviews', count: counts.reviews ?? detail?.reviews?.length }] : []),
+    ...(isBand ? [{ key: 'posts', label: 'Posts', count: counts.posts ?? detail?.posts?.length }] : []),
+    { key: 'disputes', label: 'Disputes', count: counts.disputes ?? detail?.disputes?.length },
+    { key: 'availability', label: 'Requests', count: counts.availabilityRequests ?? detail?.availabilityRequests?.length },
   ]
 
   return (
@@ -341,15 +354,19 @@ function UserDetailDrawer({ userId, onClose, onChanged }) {
                   <KeyValue label="Packages" value={detail.band.packagesCount} />
                 </Card>
               )}
-
-              <RawPanel data={user} label="Raw user record" />
             </div>
           )}
 
           {tab === 'bookings' && <RecordList items={detail.bookings} type="booking" />}
           {tab === 'payments' && <RecordList items={detail.payments} type="payment" />}
+          {tab === 'payouts' && <RecordList items={detail.payouts} type="payout" />}
+          {tab === 'packages' && <PackagesTab items={detail.packages} onChanged={load} />}
+          {tab === 'reviews' && <RecordList items={detail.reviews} type="review" />}
+          {tab === 'posts' && <PostsTab items={detail.posts} onChanged={load} />}
           {tab === 'disputes' && <RecordList items={detail.disputes} type="dispute" />}
-          {tab === 'availability' && <RecordList items={detail.availabilityRequests} type="availability" />}
+          {tab === 'availability' && (
+            <AvailabilityTab availabilityRequests={detail.availabilityRequests} openRequests={detail.openRequests} isBand={isBand} />
+          )}
         </div>
       )}
 
@@ -448,15 +465,45 @@ function RecordList({ items, type }) {
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="truncate text-sm text-slate-200">{item.band?.fullName || item.city || item._id}</p>
-                <p className="text-xs text-slate-500">{formatDate(item.eventDate || item.createdAt)}</p>
+                <p className="text-xs text-slate-500">
+                  {formatDate(item.eventDate || item.createdAt)}
+                  {item.paymentStatus && ` · Payment: ${titleCase(item.paymentStatus)}`}
+                </p>
               </div>
-              <StatusBadge status={item.status} />
+              <StatusBadge status={item.bookingStatus || item.status} />
             </div>
           )}
           {type === 'payment' && (
             <div className="flex items-center justify-between gap-2">
-              <p className="text-sm text-slate-200">{formatCurrency(item.amount)}</p>
+              <div className="min-w-0">
+                <p className="text-sm text-slate-200">{formatCurrency(item.totalAmount)}</p>
+                {item.refundedAmount > 0 && (
+                  <p className="text-xs text-slate-500">Refunded: {formatCurrency(item.refundedAmount)}</p>
+                )}
+              </div>
               <StatusBadge status={item.status} />
+            </div>
+          )}
+          {type === 'payout' && (
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-sm text-slate-200">{formatCurrency(item.payoutAmount)}</p>
+                <p className="text-xs text-slate-500">
+                  {item.transferredAt ? `Transferred ${formatDate(item.transferredAt)}` : formatDate(item.createdAt)}
+                </p>
+              </div>
+              <StatusBadge status={item.status} />
+            </div>
+          )}
+          {type === 'review' && (
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="truncate text-sm text-slate-200">{item.comment || item.text || 'No comment'}</p>
+                <p className="text-xs text-slate-500">
+                  {item.user?.fullName || 'Anonymous'} · {formatDate(item.createdAt)}
+                </p>
+              </div>
+              {item.rating != null && <Badge tone="warning">{item.rating}★</Badge>}
             </div>
           )}
           {type === 'dispute' && (
@@ -473,6 +520,173 @@ function RecordList({ items, type }) {
           )}
         </Card>
       ))}
+    </div>
+  )
+}
+
+function PackagesTab({ items, onChanged }) {
+  const toast = useToast()
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [busy, setBusy] = useState(false)
+
+  async function handleDelete() {
+    if (!deleteTarget) return
+    setBusy(true)
+    try {
+      await BandPackagesAPI.remove(deleteTarget._id)
+      toast.success('Package deleted.')
+      setDeleteTarget(null)
+      onChanged()
+    } catch (err) {
+      toast.error(err?.message || 'Failed to delete package.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (!items || items.length === 0) {
+    return <EmptyState title="No packages" description="This band hasn't added any packages yet." />
+  }
+
+  return (
+    <div className="space-y-2">
+      {items.map((p) => (
+        <Card key={p._id} className="flex items-center justify-between gap-2 p-3.5">
+          <div className="min-w-0">
+            <p className="truncate text-sm text-slate-200">{p.name || p.title}</p>
+            <p className="text-xs text-slate-500">
+              {formatCurrency(p.price)} · {p.duration ? `${p.duration} min` : formatDate(p.createdAt)}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <Badge tone={p.isActive ? 'success' : 'neutral'}>{p.isActive ? 'Active' : 'Inactive'}</Badge>
+            <Button size="sm" variant="danger" onClick={() => setDeleteTarget(p)}>
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </Card>
+      ))}
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Delete this package?"
+        description="Blocked if there's any active booking on this package. This permanently removes it."
+        confirmLabel="Delete package"
+        variant="danger"
+        loading={busy}
+      />
+    </div>
+  )
+}
+
+function PostsTab({ items, onChanged }) {
+  const toast = useToast()
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [busy, setBusy] = useState(false)
+
+  async function handleDelete() {
+    if (!deleteTarget) return
+    setBusy(true)
+    try {
+      await PostsAPI.remove(deleteTarget._id)
+      toast.success('Post removed.')
+      setDeleteTarget(null)
+      onChanged()
+    } catch (err) {
+      toast.error(err?.message || 'Failed to delete post.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (!items || items.length === 0) {
+    return <EmptyState title="No posts" description="This band hasn't posted anything yet." />
+  }
+
+  return (
+    <div className="space-y-2">
+      {items.map((p) => (
+        <Card key={p._id} className="p-3.5">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm text-slate-200">{p.caption || 'Untitled post'}</p>
+              <p className="text-xs text-slate-500">
+                {formatNumber(p.likeCount)} likes · {formatNumber(p.commentCount)} comments · {formatNumber(p.views)} views ·{' '}
+                {formatDate(p.createdAt)}
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <Badge tone={p.isDeleted ? 'danger' : 'success'}>{p.isDeleted ? 'Removed' : 'Live'}</Badge>
+              {!p.isDeleted && (
+                <Button size="sm" variant="danger" onClick={() => setDeleteTarget(p)}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              )}
+            </div>
+          </div>
+        </Card>
+      ))}
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Remove this post?"
+        description="This soft-deletes the post and decrements the band's post count."
+        confirmLabel="Remove post"
+        variant="danger"
+        loading={busy}
+      />
+    </div>
+  )
+}
+
+function AvailabilityTab({ availabilityRequests, openRequests, isBand }) {
+  return (
+    <div className="space-y-5">
+      <div>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Availability requests</p>
+        <RecordList items={availabilityRequests} type="availability" />
+      </div>
+
+      {isBand && (
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Open request offers submitted</p>
+          {!openRequests?.offers || openRequests.offers.length === 0 ? (
+            <EmptyState title="No offers" description="This band hasn't submitted any open-request offers." />
+          ) : (
+            <div className="space-y-2">
+              {openRequests.offers.map((o) => (
+                <Card key={o._id} className="flex items-center justify-between gap-2 p-3.5">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm text-slate-200">
+                      {o.openRequest?.title || o.openRequest?.eventType || 'Open request'}
+                    </p>
+                    <p className="text-xs text-slate-500">
+                      {o.openRequest?.city} · {formatDate(o.openRequest?.eventDate)}
+                      {o.budget != null && ` · ${formatCurrency(o.budget)}`}
+                    </p>
+                  </div>
+                  <StatusBadge status={o.openRequest?.status} />
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {openRequests?.stats && (
+            <Card className="mt-3 p-4">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-400">Participation stats</p>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                <KeyValue label="Offers submitted" value={formatNumber(openRequests.stats.offersSubmitted?.total)} />
+                <KeyValue label="Won" value={formatNumber(openRequests.stats.participatedRequests?.wonByThisBand)} />
+                <KeyValue label="Lost to other band" value={formatNumber(openRequests.stats.participatedRequests?.closedLostToOtherBand)} />
+              </div>
+            </Card>
+          )}
+        </div>
+      )}
     </div>
   )
 }
