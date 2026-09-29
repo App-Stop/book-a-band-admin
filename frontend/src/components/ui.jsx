@@ -711,17 +711,41 @@ export function SectionHeading({ icon: Icon, children }) {
  */
 export function FilterBar({ search, onSearch, placeholder, fields, values, onChange, onClear }) {
   const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState(null)
   const boxRef = useRef(null)
+  const popRef = useRef(null)
+
+  const place = useCallback(() => {
+    const r = boxRef.current?.getBoundingClientRect()
+    if (!r) return
+    const width = Math.min(480, window.innerWidth - 16)
+    const minLeft = (boxRef.current.closest('main')?.getBoundingClientRect().left ?? 0) + 8
+    const left = Math.max(minLeft, Math.min(r.left, window.innerWidth - width - 8))
+    setPos({ left, top: r.bottom + 8, width })
+  }, [])
+
+  useLayoutEffect(() => {
+    if (open) place()
+  }, [open, place])
 
   useEffect(() => {
     if (!open) return undefined
+    const inside = (t) => popRef.current?.contains(t) || boxRef.current?.contains(t) || t.closest?.('[role="listbox"]')
     const onDown = (e) => {
-      if (boxRef.current?.contains(e.target) || e.target.closest?.('[role="listbox"]')) return
-      setOpen(false)
+      if (!inside(e.target)) setOpen(false)
+    }
+    const onScroll = (e) => {
+      if (!inside(e.target)) setOpen(false)
     }
     document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [open])
+    window.addEventListener('scroll', onScroll, true)
+    window.addEventListener('resize', place)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      window.removeEventListener('scroll', onScroll, true)
+      window.removeEventListener('resize', place)
+    }
+  }, [open, place])
 
   const tagText = (f) => {
     const v = values[f.key]
@@ -749,8 +773,8 @@ export function FilterBar({ search, onSearch, placeholder, fields, values, onCha
               </span>
             )}
           </Button>
-          {open && (
-            <div className="select-menu absolute left-0 z-40 mt-2 w-[min(92vw,30rem)] rounded-2xl border border-slate-900/10 bg-white p-4 shadow-xl shadow-slate-900/15 sm:left-auto sm:right-0">
+          {open && pos && createPortal(
+            <div ref={popRef} style={pos} className="select-menu fixed z-[60] rounded-2xl border border-slate-900/10 bg-white p-4 shadow-xl shadow-slate-900/15">
               <div className="grid grid-cols-2 gap-3">
               {fields.map((f) => (
                 <div key={f.key} className={f.type === 'date' ? '' : 'col-span-2'}>
@@ -790,7 +814,8 @@ export function FilterBar({ search, onSearch, placeholder, fields, values, onCha
                   Done
                 </Button>
               </div>
-            </div>
+            </div>,
+            document.body,
           )}
         </div>
       </div>
