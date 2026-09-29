@@ -5,6 +5,19 @@ import { AutoFields, Card, EmptyState, LoadingBlock, SectionTitle, Tabs } from '
 import { ConfigAPI } from '../lib/api'
 import { titleCase } from '../lib/formatters'
 
+// Display-name overrides, keyed by the normalised original field name (each applies once, no chaining).
+const FIELD_LABELS = {
+  genre: 'Live Music',
+  genres: 'Live Music',
+  genreperformed: 'Live Music',
+  entertainment: 'Event Type',
+  newentertainmentcategory: 'Entertainment',
+}
+
+function fieldLabel(field) {
+  return FIELD_LABELS[String(field).toLowerCase().replace(/[^a-z]/g, '')] || titleCase(field)
+}
+
 export default function ConfigPage() {
   const [tab, setTab] = useState('policy')
   const [policy, setPolicy] = useState(null)
@@ -65,7 +78,7 @@ export default function ConfigPage() {
                 <Card key={field} className="p-5">
                   <div className="mb-3 flex items-center gap-2">
                     <ListTree className="h-4 w-4 text-brand-400" />
-                    <h3 className="text-sm font-semibold text-slate-200">{titleCase(field)}</h3>
+                    <h3 className="text-sm font-semibold text-slate-200">{fieldLabel(field)}</h3>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {(Array.isArray(values) ? values : []).map((v) => (

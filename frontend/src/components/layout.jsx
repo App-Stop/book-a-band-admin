@@ -57,7 +57,7 @@ function NavList({ onNavigate }) {
 function Brand() {
   return (
     <div className="flex items-center gap-2.5 px-5 py-5">
-      <div className="brand-gradient flex h-9 w-9 items-center justify-center rounded-xl shadow-lg shadow-brand-600/30">
+      <div className=" flex h-9 w-9 items-center justify-center rounded-xl shadow-lg shadow-brand-600/30">
         <img src="/Vector.png" alt="" className="h-5 w-5 object-contain" />
       </div>
       <div className="min-w-0">
