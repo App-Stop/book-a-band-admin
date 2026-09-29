@@ -624,11 +624,22 @@ function PackagesTab({ items, onChanged }) {
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-slate-100">{p.name || p.title}</p>
             <p className="text-xs text-slate-500">
-              {formatCurrency(p.price)} · {p.duration ? `${p.duration} min` : formatDate(p.createdAt)}
+              {formatCurrency(p.price)}
+              {p.duration ? ` · ${p.duration} ${Number(p.duration) === 1 ? 'hour' : 'hours'}` : ''}
             </p>
             {p.description && <p className="mt-1.5 line-clamp-3 whitespace-pre-wrap break-words text-xs text-slate-400">{p.description}</p>}
-            {Array.isArray(p.includes) && p.includes.length > 0 && (
-              <p className="mt-1 text-xs text-slate-500">Includes: {p.includes.join(', ')}</p>
+            {Array.isArray(p.features) && p.features.length > 0 && (
+              <div className="mt-2">
+                <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">Features</p>
+                <ul className="mt-1 space-y-0.5">
+                  {p.features.map((f, i) => (
+                    <li key={i} className="flex items-start gap-1.5 text-xs text-slate-300">
+                      <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-brand-400" />
+                      <span className="break-words">{f}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
             <p className="mt-1 text-xs text-slate-600">Added {formatDate(p.createdAt)}</p>
           </div>
