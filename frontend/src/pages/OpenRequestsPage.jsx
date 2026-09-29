@@ -20,6 +20,7 @@ import { formatDateTime } from '../lib/formatters'
 
 const STATUS_OPTIONS = ['open', 'closed', 'expired', 'cancelled']
 const REQUEST_KNOWN_KEYS = ['_id', 'user', 'status', 'createdAt', 'updatedAt']
+const LOCATION_KEY = /location|address|coordinates|latitude|longitude|geo|lat$|lng$|lon$/i
 
 export default function OpenRequestsPage() {
   const toast = useToast()
@@ -194,7 +195,7 @@ function OpenRequestDrawer({ request, onClose, onExpire }) {
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Request details</p>
             <Card className="p-4">
-              <AutoFields data={request} exclude={REQUEST_KNOWN_KEYS} />
+              <AutoFields data={request} exclude={REQUEST_KNOWN_KEYS} excludeMatch={LOCATION_KEY} />
             </Card>
           </div>
         )}

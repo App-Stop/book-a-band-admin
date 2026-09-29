@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { CalendarClock, XCircle, CheckCircle2 } from 'lucide-react'
 import { AdminLayout } from '../components/layout'
 import {
@@ -22,7 +23,7 @@ import {
 } from '../components/ui'
 import { BookingsAPI } from '../lib/api'
 import { useToast } from '../context/ToastContext'
-import { formatCurrency, formatDate, formatDateTime, titleCase } from '../lib/formatters'
+import { formatCurrency, formatDate, formatDateTime, formatTimeRange, humanizeText, titleCase } from '../lib/formatters'
 
 const STATUS_OPTIONS = [
   'pending_payment',
@@ -55,7 +56,8 @@ export default function BookingsPage() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [selectedId, setSelectedId] = useState(null)
+  const [searchParams] = useSearchParams()
+  const [selectedId, setSelectedId] = useState(searchParams.get('open'))
 
   const fetchList = useCallback(() => {
     setLoading(true)
@@ -90,6 +92,12 @@ export default function BookingsPage() {
     { key: 'band', header: 'Band', render: (b) => b.band?.fullName || '—' },
     { key: 'status', header: 'Status', render: (b) => <StatusBadge status={b.bookingStatus} /> },
     { key: 'eventDate', header: 'Event date', render: (b) => formatDate(b.eventDate) },
+    {
+      key: 'eventTime',
+      header: 'Event time',
+      className: 'whitespace-nowrap',
+      render: (b) => formatTimeRange(b.eventStart, b.eventEnd) || '—',
+    },
     { key: 'created', header: 'Created', render: (b) => formatDate(b.createdAt) },
   ]
 
@@ -271,6 +279,7 @@ function BookingDetailDrawer({ bookingId, onClose, onChanged }) {
             <KeyValue label="Customer email" value={booking.user?.email} />
             <KeyValue label="Band" value={booking.band?.fullName} />
             <KeyValue label="Event date" value={formatDate(booking.eventDate)} />
+            <KeyValue label="Event time" value={formatTimeRange(booking.eventStart, booking.eventEnd)} />
             <KeyValue label="City" value={booking.city} />
             <KeyValue label="Address" value={booking.address} />
             <KeyValue label="Created" value={formatDateTime(booking.createdAt)} />
@@ -316,7 +325,7 @@ function BookingDetailDrawer({ bookingId, onClose, onChanged }) {
               <div className="space-y-2">
                 {detail.activityLog.map((entry, i) => (
                   <div key={entry._id || i} className="flex items-start justify-between gap-3 border-b border-white/5 py-2 text-sm last:border-0">
-                    <span className="text-slate-300">{entry.action || entry.type || 'Activity'}</span>
+                    <span className="text-slate-300">{humanizeText(entry.action || entry.type || 'Activity')}</span>
                     <span className="shrink-0 text-xs text-slate-500">{formatDateTime(entry.createdAt)}</span>
                   </div>
                 ))}

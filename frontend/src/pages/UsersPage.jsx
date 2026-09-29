@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Users as UsersIcon, ShieldCheck, UserCog, Ban, RotateCcw, Trash2 } from 'lucide-react'
 import { AdminLayout } from '../components/layout'
 import {
+  AppLink,
   Badge,
   BoolBadge,
   Button,
@@ -9,6 +10,7 @@ import {
   ConfirmDialog,
   Drawer,
   EmptyState,
+  ExternalLink,
   Field,
   KeyValue,
   LoadingBlock,
@@ -23,7 +25,7 @@ import {
 } from '../components/ui'
 import { BandPackagesAPI, PostsAPI, UsersAPI } from '../lib/api'
 import { useToast } from '../context/ToastContext'
-import { formatCurrency, formatDate, formatDateTime, formatNumber, initials, titleCase } from '../lib/formatters'
+import { findUrl, formatTimeRange, formatCurrency, formatDate, formatDateTime, formatNumber, initials, refId, titleCase } from '../lib/formatters'
 
 const ROLE_OPTIONS = ['user', 'band', 'admin']
 
@@ -452,74 +454,141 @@ function UserDetailDrawer({ userId, onClose, onChanged }) {
   )
 }
 
+function Row({ label, value }) {
+  if (value == null || value === '' || value === '—') return null
+  return <KeyValue label={label} value={value} />
+}
+
+function personName(v) {
+  return v && typeof v === 'object' ? v.fullName || v.email : null
+}
+
+function timeWindow(item) {
+  return formatTimeRange(item.eventStart, item.eventEnd)
+}
+
 function RecordList({ items, type }) {
   if (!items || items.length === 0) {
     return <EmptyState title="No records" description="Nothing to show here yet." />
   }
 
   return (
-    <div className="space-y-2">
-      {items.map((item) => (
-        <Card key={item._id} className="p-3.5">
-          {type === 'booking' && (
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="truncate text-sm text-slate-200">{item.band?.fullName || item.city || 'Booking'}</p>
-                <p className="text-xs text-slate-500">
-                  {formatDate(item.eventDate || item.createdAt)}
-                  {item.paymentStatus && ` · Payment: ${titleCase(item.paymentStatus)}`}
-                </p>
-              </div>
-              <StatusBadge status={item.bookingStatus || item.status} />
-            </div>
-          )}
-          {type === 'payment' && (
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-sm text-slate-200">{formatCurrency(item.totalAmount)}</p>
-                {item.refundedAmount > 0 && (
-                  <p className="text-xs text-slate-500">Refunded: {formatCurrency(item.refundedAmount)}</p>
-                )}
-              </div>
-              <StatusBadge status={item.status} />
-            </div>
-          )}
-          {type === 'payout' && (
-            <div className="flex items-center justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-sm text-slate-200">{formatCurrency(item.payoutAmount)}</p>
-                <p className="text-xs text-slate-500">
-                  {item.transferredAt ? `Transferred ${formatDate(item.transferredAt)}` : formatDate(item.createdAt)}
-                </p>
-              </div>
-              <StatusBadge status={item.status} />
-            </div>
-          )}
-          {type === 'review' && (
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="truncate text-sm text-slate-200">{item.comment || item.text || 'No comment'}</p>
-                <p className="text-xs text-slate-500">
-                  {item.user?.fullName || 'Anonymous'} · {formatDate(item.createdAt)}
-                </p>
-              </div>
-              {item.rating != null && <Badge tone="warning">{item.rating}★</Badge>}
-            </div>
-          )}
-          {type === 'dispute' && (
-            <div className="flex items-center justify-between gap-2">
-              <p className="truncate text-sm text-slate-200">{item.reason || 'Dispute'}</p>
-              <StatusBadge status={item.status} />
-            </div>
-          )}
-          {type === 'availability' && (
-            <div className="flex items-center justify-between gap-2">
-              <p className="truncate text-sm text-slate-200">{item.city || 'Availability'}</p>
-              <StatusBadge status={item.status} />
-            </div>
-          )}
-        </Card>
-      ))}
+    <div className="space-y-3">
+      {items.map((item) => {
+        const bookingId = type === 'booking' ? item._id : refId(item.booking) || item.bookingId
+        return (
+          <Card key={item._id} className="p-4">
+            {type === 'booking' && (
+              <>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="truncate text-sm font-medium text-slate-100">
+                    {personName(item.band) || personName(item.user) || item.city || 'Booking'}
+                  </p>
+                  <StatusBadge status={item.bookingStatus || item.status} />
+                </div>
+                <div className="mt-2 divide-y divide-white/5">
+                  <Row label="Customer" value={personName(item.user)} />
+                  <Row label="Band" value={personName(item.band)} />
+                  <Row label="Event date" value={item.eventDate ? formatDate(item.eventDate) : null} />
+                  <Row label="Event time" value={timeWindow(item)} />
+                  <Row label="City" value={item.city} />
+                  <Row label="Address" value={item.address} />
+                  <Row label="Total" value={item.totalAmount != null ? formatCurrency(item.totalAmount) : null} />
+                  <Row label="Payment" value={item.paymentStatus ? <StatusBadge status={item.paymentStatus} /> : null} />
+                  <Row label="Created" value={formatDateTime(item.createdAt)} />
+                </div>
+              </>
+            )}
+            {type === 'payment' && (
+              <>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-medium text-slate-100">{formatCurrency(item.totalAmount)}</p>
+                  <StatusBadge status={item.status} />
+                </div>
+                <div className="mt-2 divide-y divide-white/5">
+                  <Row label="Refunded" value={item.refundedAmount > 0 ? formatCurrency(item.refundedAmount) : null} />
+                  <Row label="Platform fee" value={item.platformFee != null ? formatCurrency(item.platformFee) : null} />
+                  <Row label="Method" value={item.paymentMethod ? titleCase(item.paymentMethod) : null} />
+                  <Row label="Paid" value={item.paidAt ? formatDateTime(item.paidAt) : null} />
+                  <Row label="Created" value={formatDateTime(item.createdAt)} />
+                </div>
+              </>
+            )}
+            {type === 'payout' && (
+              <>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-medium text-slate-100">{formatCurrency(item.payoutAmount)}</p>
+                  <StatusBadge status={item.status} />
+                </div>
+                <div className="mt-2 divide-y divide-white/5">
+                  <Row label="Band" value={personName(item.band)} />
+                  <Row label="Transferred" value={item.transferredAt ? formatDateTime(item.transferredAt) : null} />
+                  <Row label="Created" value={formatDateTime(item.createdAt)} />
+                </div>
+              </>
+            )}
+            {type === 'review' && (
+              <>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-medium text-slate-100">{item.user?.fullName || 'Anonymous'}</p>
+                  {item.rating != null && <Badge tone="warning">{item.rating}★</Badge>}
+                </div>
+                <p className="mt-2 whitespace-pre-wrap break-words text-sm text-slate-300">{item.comment || item.text || 'No comment'}</p>
+                <p className="mt-1 text-xs text-slate-500">{formatDateTime(item.createdAt)}</p>
+              </>
+            )}
+            {type === 'dispute' && (
+              <>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-medium text-slate-100">{item.reason || 'Dispute'}</p>
+                  <StatusBadge status={item.status} />
+                </div>
+                <div className="mt-2 divide-y divide-white/5">
+                  <Row label="Opened" value={formatDateTime(item.openedAt || item.createdAt)} />
+                  <Row label="Resolution" value={item.resolution} />
+                </div>
+              </>
+            )}
+            {type === 'availability' && (
+              <>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-medium text-slate-100">{item.city || 'Availability request'}</p>
+                  <StatusBadge status={item.status} />
+                </div>
+                <div className="mt-2 divide-y divide-white/5">
+                  <Row label="Event date" value={item.eventDate ? formatDate(item.eventDate) : null} />
+                  <Row label="Event time" value={timeWindow(item)} />
+                  <Row label="Address" value={item.address} />
+                  <Row label="Created" value={formatDateTime(item.createdAt)} />
+                </div>
+              </>
+            )}
+
+            {(type === 'booking' || type === 'payment') && bookingId && (
+              <p className="mt-2.5 text-xs">
+                <AppLink to={`/bookings?open=${bookingId}`}>
+                  {type === 'booking' ? 'View full booking details' : 'View payment in booking details'}
+                </AppLink>
+              </p>
+            )}
+            {type === 'payout' && (
+              <p className="mt-2.5 text-xs">
+                <AppLink to={`/payouts?open=${item._id}`}>View full payout details</AppLink>
+              </p>
+            )}
+            {type === 'dispute' && (
+              <p className="mt-2.5 text-xs">
+                <AppLink to={`/disputes?open=${item._id}`}>View full dispute details</AppLink>
+              </p>
+            )}
+            {type === 'review' && bookingId && (
+              <p className="mt-2.5 text-xs">
+                <AppLink to={`/bookings?open=${bookingId}`}>View related booking</AppLink>
+              </p>
+            )}
+          </Card>
+        )
+      })}
     </div>
   )
 }
@@ -551,12 +620,17 @@ function PackagesTab({ items, onChanged }) {
   return (
     <div className="space-y-2">
       {items.map((p) => (
-        <Card key={p._id} className="flex items-center justify-between gap-2 p-3.5">
+        <Card key={p._id} className="flex items-start justify-between gap-2 p-4">
           <div className="min-w-0">
-            <p className="truncate text-sm text-slate-200">{p.name || p.title}</p>
+            <p className="truncate text-sm font-medium text-slate-100">{p.name || p.title}</p>
             <p className="text-xs text-slate-500">
               {formatCurrency(p.price)} · {p.duration ? `${p.duration} min` : formatDate(p.createdAt)}
             </p>
+            {p.description && <p className="mt-1.5 line-clamp-3 whitespace-pre-wrap break-words text-xs text-slate-400">{p.description}</p>}
+            {Array.isArray(p.includes) && p.includes.length > 0 && (
+              <p className="mt-1 text-xs text-slate-500">Includes: {p.includes.join(', ')}</p>
+            )}
+            <p className="mt-1 text-xs text-slate-600">Added {formatDate(p.createdAt)}</p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <Badge tone={p.isActive ? 'success' : 'neutral'}>{p.isActive ? 'Active' : 'Inactive'}</Badge>
@@ -616,6 +690,11 @@ function PostsTab({ items, onChanged }) {
                 {formatNumber(p.likeCount)} likes · {formatNumber(p.commentCount)} comments · {formatNumber(p.views)} views ·{' '}
                 {formatDate(p.createdAt)}
               </p>
+              {findUrl(p) ? (
+                <p className="mt-1.5 text-xs">
+                  <ExternalLink href={findUrl(p)}>Click here to view post</ExternalLink>
+                </p>
+              ) : null}
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <Badge tone={p.isDeleted ? 'danger' : 'success'}>{p.isDeleted ? 'Removed' : 'Live'}</Badge>

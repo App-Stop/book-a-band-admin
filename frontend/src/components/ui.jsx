@@ -1,8 +1,9 @@
 import { Children, Fragment, forwardRef, isValidElement, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, ChevronDown, ChevronLeft, ChevronRight, Loader2, Search, X } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { ArrowUpRight, Check, ChevronDown, ChevronLeft, ChevronRight, ExternalLink as ExternalLinkIcon, Loader2, Search, X } from 'lucide-react'
 import { clsx } from 'clsx'
-import { formatCurrency, formatDateTime, formatNumber, titleCase, toDate } from '../lib/formatters'
+import { formatCurrency, formatDateTime, formatNumber, isUrl, titleCase, toDate } from '../lib/formatters'
 import { UsersAPI } from '../lib/api'
 
 /* ----------------------------- Buttons ----------------------------- */
@@ -792,6 +793,55 @@ function isIdKey(key) {
   return key === '_id' || key === 'id' || /Id$/.test(key)
 }
 
+const isIsoDate = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(v)
+const isObjectId =(v) => typeof v === 'string' && /^[a-f0-9]{24}$/i.test(v)
+// snake_case / SCREAMING_SNAKE enum values such as "pending_payment"
+const isEnumLike = (v) => typeof v === 'string' && /^[A-Za-z]+(_[A-Za-z]+)+$/.test(v)
+
+function linkLabel(key) {
+  const k = String(key || '')
+  if (/video/i.test(k)) return 'Click here to view video'
+  if (/image|photo|picture|thumbnail|avatar/i.test(k)) return 'Click here to view image'
+  if (/post/i.test(k)) return 'Click here to view post'
+  return 'Click here to open link'
+}
+
+/** Text-styled external link that opens in a new tab. */
+export function ExternalLink({ href, children, className }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={(e) => e.stopPropagation()}
+      className={clsx(
+        'inline-flex items-center gap-1 text-brand-300 underline decoration-brand-300/40 underline-offset-2 transition hover:text-brand-200 hover:decoration-brand-200',
+        className,
+      )}
+    >
+      {children}
+      <ExternalLinkIcon className="h-3 w-3 shrink-0" />
+    </a>
+  )
+}
+
+/** In-app link to another admin page. */
+export function AppLink({ to, children, className }) {
+  return (
+    <Link
+      to={to}
+      onClick={(e) => e.stopPropagation()}
+      className={clsx(
+        'inline-flex items-center gap-1 text-brand-300 underline decoration-brand-300/40 underline-offset-2 transition hover:text-brand-200 hover:decoration-brand-200',
+        className,
+      )}
+    >
+      {children}
+      <ArrowUpRight className="h-3 w-3 shrink-0" />
+    </Link>
+  )
+}
+
 function AutoPrimitiveValue({ keyName, value }) {
   if (value == null || value === '') return <span className="text-slate-500">—</span>
   if (typeof value === 'boolean') return <BoolBadge value={value} />
@@ -799,8 +849,10 @@ function AutoPrimitiveValue({ keyName, value }) {
     return <span>{isMoneyKey(keyName) ? formatCurrency(value) : formatNumber(value)}</span>
   }
   if (typeof value === 'string') {
+    if (isUrl(value)) return <ExternalLink href={value}>{linkLabel(keyName)}</ExternalLink>
     if (isIdKey(keyName)) return <span className="font-mono text-xs">{value}</span>
-    if (isDateKey(keyName) && toDate(value)) return <span>{formatDateTime(value)}</span>
+    if ((isDateKey(keyName) || isIsoDate(value)) && toDate(value)) return <span>{formatDateTime(value)}</span>
+    if (isEnumLike(value)) return <span>{titleCase(value)}</span>
     return <span className="whitespace-pre-wrap break-words">{value}</span>
   }
   return <span className="text-slate-500">—</span>
@@ -812,17 +864,19 @@ function AutoPrimitiveValue({ keyName, value }) {
  * dumping raw JSON. Used as the default detail view wherever the exact backend
  * schema isn't pinned down (posts, open requests, packages, platform config, …).
  */
-export function AutoFields({ data, exclude = [], depth = 0 }) {
+export function AutoFields({ data, exclude = [], excludeMatch, depth = 0 }) {
   if (data == null) return <p className="text-sm text-slate-500">No data.</p>
 
   if (Array.isArray(data)) {
+    if (data.length === 0) return <p className="text-xs text-slate-500">None</p>
+    data = data.filter((item) => !isObjectId(item))
     if (data.length === 0) return <p className="text-xs text-slate-500">None</p>
     const allPrimitive = data.every((item) => item == null || typeof item !== 'object')
     if (allPrimitive) {
       return (
         <div className="flex flex-wrap gap-1.5">
           {data.map((item, i) => (
-            <Badge key={i}>{String(item)}</Badge>
+            isUrl(item) ? <ExternalLink key={i} href={item}>{linkLabel('')}</ExternalLink> : <Badge key={i}>{isEnumLike(item) ? titleCase(item) : String(item)}</Badge>
           ))}
         </div>
       )
@@ -831,7 +885,7 @@ export function AutoFields({ data, exclude = [], depth = 0 }) {
       <div className="space-y-2">
         {data.map((item, i) => (
           <div key={item?._id || i} className="rounded-xl border border-white/8 bg-white/[0.02] p-3.5">
-            <AutoFields data={item} depth={depth + 1} />
+            <AutoFields data={item} excludeMatch={excludeMatch} depth={depth + 1} />
           </div>
         ))}
       </div>
@@ -842,7 +896,7 @@ export function AutoFields({ data, exclude = [], depth = 0 }) {
     return <AutoPrimitiveValue keyName="" value={data} />
   }
 
-  const entries = Object.entries(data).filter(([k, v]) => !AUTO_HIDDEN_KEYS.has(k) && !exclude.includes(k) && !(isIdKey(k) && (v == null || typeof v !== 'object')))
+  const entries = Object.entries(data).filter(([k, v]) => !AUTO_HIDDEN_KEYS.has(k) && !exclude.includes(k) && !(excludeMatch && excludeMatch.test(k)) && !(isIdKey(k) && (v == null || typeof v !== 'object')) && !isObjectId(v))
   if (entries.length === 0) return <p className="text-xs text-slate-500">No details available.</p>
 
   const primitive = entries.filter(([, v]) => v == null || typeof v !== 'object')
@@ -862,7 +916,7 @@ export function AutoFields({ data, exclude = [], depth = 0 }) {
         <div key={k}>
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{humanizeKey(k)}</p>
           <div className="rounded-xl border border-white/8 bg-white/[0.02] p-3.5">
-            <AutoFields data={v} depth={depth + 1} />
+            <AutoFields data={v} excludeMatch={excludeMatch} depth={depth + 1} />
           </div>
         </div>
       ))}
@@ -871,7 +925,7 @@ export function AutoFields({ data, exclude = [], depth = 0 }) {
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
             {humanizeKey(k)} {v.length > 0 && <span className="text-slate-600">({v.length})</span>}
           </p>
-          <AutoFields data={v} depth={depth + 1} />
+          <AutoFields data={v} excludeMatch={excludeMatch} depth={depth + 1} />
         </div>
       ))}
     </div>

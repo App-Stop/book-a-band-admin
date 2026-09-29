@@ -86,7 +86,22 @@ export default function ConfigPage() {
   )
 }
 
-function PolicyGrid({ policy }) {
+const HIDDEN_POLICY_KEY = /cron|escrow.?release/i
+
+function stripHidden(value) {
+  if (Array.isArray(value)) return value.map(stripHidden)
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([k]) => !HIDDEN_POLICY_KEY.test(k))
+        .map(([k, v]) => [k, stripHidden(v)]),
+    )
+  }
+  return value
+}
+
+function PolicyGrid({ policy: rawPolicy }) {
+  const policy = stripHidden(rawPolicy)
   const entries = Object.entries(policy)
   const simple = entries.filter(([, v]) => typeof v !== 'object' || v === null)
   const nested = entries.filter(([, v]) => typeof v === 'object' && v !== null)

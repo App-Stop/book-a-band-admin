@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Wallet, RefreshCw } from 'lucide-react'
 import { AdminLayout } from '../components/layout'
 import {
@@ -19,7 +20,7 @@ import {
 } from '../components/ui'
 import { PayoutsAPI } from '../lib/api'
 import { useToast } from '../context/ToastContext'
-import { formatCurrency, formatDate, formatDateTime, titleCase } from '../lib/formatters'
+import { formatCurrency, formatDate, formatDateTime, formatTimeRange, titleCase } from '../lib/formatters'
 
 const STATUS_OPTIONS = ['pending', 'processing', 'paid', 'failed', 'waiting_onboarding', 'cancelled']
 const NEEDS_ACTION_STATUS = 'failed,waiting_onboarding'
@@ -31,7 +32,8 @@ export default function PayoutsPage() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [selectedId, setSelectedId] = useState(null)
+  const [searchParams] = useSearchParams()
+  const [selectedId, setSelectedId] = useState(searchParams.get('open'))
 
   const fetchList = useCallback(() => {
     setLoading(true)
@@ -185,7 +187,7 @@ function PayoutDetailDrawer({ payoutId, onClose, onChanged }) {
             <Card className="p-4">
               <SectionTitle>Booking</SectionTitle>
               <KeyValue label="Event date" value={formatDate(payout.booking.eventDate)} />
-              <KeyValue label="Event window" value={`${payout.booking.eventStart || '—'} – ${payout.booking.eventEnd || '—'}`} />
+              <KeyValue label="Event window" value={formatTimeRange(payout.booking.eventStart, payout.booking.eventEnd)} />
               <KeyValue label="City" value={payout.booking.city} />
               <KeyValue label="Address" value={payout.booking.address} />
             </Card>

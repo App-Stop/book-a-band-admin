@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Flag, LifeBuoy, Save, ShieldCheck, Trash2 } from 'lucide-react'
 import { AdminLayout } from '../components/layout'
 import {
@@ -9,6 +10,7 @@ import {
   ConfirmDialog,
   Drawer,
   EmptyState,
+  ExternalLink,
   Field,
   KeyValue,
   LoadingBlock,
@@ -22,7 +24,7 @@ import {
 } from '../components/ui'
 import { ReportsAPI, SupportMessagesAPI } from '../lib/api'
 import { useToast } from '../context/ToastContext'
-import { formatDateTime, titleCase } from '../lib/formatters'
+import { findUrl, formatDateTime, titleCase } from '../lib/formatters'
 
 const REPORT_STATUS_OPTIONS = ['pending', 'resolved', 'dismissed', 'all']
 const REPORT_TYPE_OPTIONS = ['review', 'post', 'comment']
@@ -31,7 +33,8 @@ const TYPE_TONE = { review: 'warning', post: 'info', comment: 'neutral' }
 const SUPPORT_STATUS_OPTIONS = ['new', 'pending', 'in_progress', 'resolved', 'closed']
 
 const REPORT_KNOWN_KEYS = ['_id', '__v', 'type', 'status', 'targetId', 'reportedBy', 'resolvedBy', 'createdAt', 'updatedAt', 'resolvedAt']
-const TARGET_KNOWN_KEYS = ['_id', '__v', 'caption', 'comment', 'text', 'content', 'rating', 'band', 'user', 'createdAt', 'updatedAt']
+const LOCATION_KEY = /location|address|coordinates|latitude|longitude|geo|lat$|lng$|lon$/i
+const TARGET_KNOWN_KEYS = ['_id', '__v', 'post', 'postId', 'caption', 'comment', 'text', 'content', 'rating', 'band', 'user', 'createdAt', 'updatedAt']
 
 function getContentPreview(report) {
   const t = report.targetId
@@ -74,7 +77,8 @@ function ReportsTab({ onPendingCount }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [selectedId, setSelectedId] = useState(null)
+  const [searchParams] = useSearchParams()
+  const [selectedId, setSelectedId] = useState(searchParams.get('open'))
 
   const fetchList = useCallback(() => {
     setLoading(true)
@@ -190,7 +194,9 @@ function ReportDetailDrawer({ report, onClose, onResolved }) {
   const target = report.targetId && typeof report.targetId === 'object' ? report.targetId : null
   const isPending = report.status === 'pending'
   const hasExtraReportFields = Object.keys(report).some((k) => !REPORT_KNOWN_KEYS.includes(k))
-  const hasExtraTargetFields = target && Object.keys(target).some((k) => !TARGET_KNOWN_KEYS.includes(k))
+  const hasExtraTargetFields =
+    target && Object.keys(target).some((k) => !TARGET_KNOWN_KEYS.includes(k) && !LOCATION_KEY.test(k))
+  const postUrl = report.type === 'comment' && target ? findUrl(target.post) || findUrl(target.postUrl) : report.type === 'post' ? findUrl(target) : null
 
   async function handleResolve(action) {
     setBusy(true)
@@ -240,6 +246,11 @@ function ReportDetailDrawer({ report, onClose, onResolved }) {
           {target?.rating != null && (
             <p className="mt-2 text-xs text-slate-400">Rating: <span className="text-slate-200">{target.rating} / 5</span></p>
           )}
+          {postUrl && (
+            <p className="mt-3 text-sm">
+              <ExternalLink href={postUrl}>Click here to view post</ExternalLink>
+            </p>
+          )}
         </Card>
 
         <Card className="p-4">
@@ -264,7 +275,7 @@ function ReportDetailDrawer({ report, onClose, onResolved }) {
           <div>
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Content details</p>
             <Card className="p-4">
-              <AutoFields data={target} exclude={TARGET_KNOWN_KEYS} />
+              <AutoFields data={target} exclude={TARGET_KNOWN_KEYS} excludeMatch={LOCATION_KEY} />
             </Card>
           </div>
         )}

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { ShieldAlert } from 'lucide-react'
 import { AdminLayout } from '../components/layout'
 import {
@@ -38,7 +39,8 @@ export default function DisputesPage() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [selectedId, setSelectedId] = useState(null)
+  const [searchParams] = useSearchParams()
+  const [selectedId, setSelectedId] = useState(searchParams.get('open'))
 
   const fetchList = useCallback(() => {
     setLoading(true)
