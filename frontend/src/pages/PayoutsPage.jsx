@@ -9,6 +9,7 @@ import {
   Drawer,
   EmptyState,
   EntitySearchSelect,
+  Field,
   KeyValue,
   LoadingBlock,
   Pagination,
@@ -66,7 +67,7 @@ export default function PayoutsPage() {
   return (
     <AdminLayout title="Payouts" description="Track and retry band payouts">
       <Card className="mb-4 p-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Select value={filters.status} onChange={(e) => updateFilter('status', e.target.value)}>
             <option value={NEEDS_ACTION_STATUS}>Needs action (failed / waiting onboarding)</option>
             <option value="">All payouts</option>
@@ -86,8 +87,12 @@ export default function PayoutsPage() {
               setFilters((f) => ({ ...f, band: id || '', bandLabel: label || '' }))
             }}
           />
-          <TextInput type="date" value={filters.from} onChange={(e) => updateFilter('from', e.target.value)} />
-          <TextInput type="date" value={filters.to} onChange={(e) => updateFilter('to', e.target.value)} />
+          <Field label="Created from">
+            <TextInput type="date" value={filters.from} onChange={(e) => updateFilter('from', e.target.value)} />
+          </Field>
+          <Field label="Created to">
+            <TextInput type="date" value={filters.to} onChange={(e) => updateFilter('to', e.target.value)} />
+          </Field>
         </div>
       </Card>
 

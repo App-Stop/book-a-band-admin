@@ -6,6 +6,7 @@ import {
   Card,
   EmptyState,
   EntitySearchSelect,
+  Field,
   KeyValue,
   Drawer,
   LoadingBlock,
@@ -82,7 +83,7 @@ export default function DisputesPage() {
   return (
     <AdminLayout title="Disputes" description="Triage open disputes between customers and bands">
       <Card className="mb-4 p-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <SearchInput
             placeholder="Search by booking, customer, band…"
             value={filters.search}
@@ -116,8 +117,12 @@ export default function DisputesPage() {
               setFilters((f) => ({ ...f, customer: id || '', customerLabel: label || '' }))
             }}
           />
-          <TextInput type="date" value={filters.from} onChange={(e) => updateFilter('from', e.target.value)} />
-          <TextInput type="date" value={filters.to} onChange={(e) => updateFilter('to', e.target.value)} />
+          <Field label="Created from">
+            <TextInput type="date" value={filters.from} onChange={(e) => updateFilter('from', e.target.value)} />
+          </Field>
+          <Field label="Created to">
+            <TextInput type="date" value={filters.to} onChange={(e) => updateFilter('to', e.target.value)} />
+          </Field>
         </div>
       </Card>
 
