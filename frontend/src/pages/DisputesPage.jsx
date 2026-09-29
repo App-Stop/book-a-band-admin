@@ -164,7 +164,7 @@ function DisputeDetailDrawer({ disputeId, onClose }) {
   const payout = detail?.payout
 
   return (
-    <Drawer open onClose={onClose} title="Dispute detail" subtitle={dispute?._id}>
+    <Drawer open onClose={onClose} title="Dispute detail" subtitle={dispute?.band?.fullName}>
       {loading && <LoadingBlock />}
       {error && !loading && <p className="text-sm text-danger-400">{error}</p>}
 
@@ -185,7 +185,7 @@ function DisputeDetailDrawer({ disputeId, onClose }) {
 
           <Card className="p-4">
             <SectionTitle>Booking</SectionTitle>
-            <KeyValue label="Booking ID" value={dispute.booking?._id} mono />
+            <KeyValue label="Customer" value={dispute.customer?.fullName} />
             <KeyValue label="Event date" value={formatDate(dispute.booking?.eventDate)} />
             <KeyValue label="Booking status" value={<StatusBadge status={dispute.booking?.bookingStatus} />} />
             <KeyValue label="Total amount" value={formatCurrency(dispute.booking?.totalAmount)} />

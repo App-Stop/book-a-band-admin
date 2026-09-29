@@ -1,6 +1,6 @@
-import { forwardRef, useEffect, useId, useRef, useState } from 'react'
+import { Children, Fragment, forwardRef, isValidElement, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronDown, ChevronLeft, ChevronRight, Loader2, Search, X } from 'lucide-react'
+import { Check, ChevronDown, ChevronLeft, ChevronRight, Loader2, Search, X } from 'lucide-react'
 import { clsx } from 'clsx'
 import { formatCurrency, formatDateTime, formatNumber, titleCase, toDate } from '../lib/formatters'
 import { UsersAPI } from '../lib/api'
@@ -190,25 +190,167 @@ export function SuggestInput({ suggestions = [], className, ...props }) {
   )
 }
 
-export const Select = forwardRef(function Select({ className, children, style, ...props }, ref) {
+function collectOptions(children, out = []) {
+  Children.forEach(children, (child) => {
+    if (!isValidElement(child)) return
+    if (child.type === Fragment) collectOptions(child.props.children, out)
+    else if (child.type === 'option') {
+      const label = Children.toArray(child.props.children).join('')
+      out.push({ value: String(child.props.value ?? label), label, disabled: !!child.props.disabled })
+    }
+  })
+  return out
+}
+
+/**
+ * Themed dropdown. Drop-in replacement for a native <select>: accepts <option>
+ * children and calls onChange with a `{ target: { value } }` shaped event.
+ */
+export function Select({ className, children, value, onChange, disabled, placeholder = 'Select…' }) {
+  const [open, setOpen] = useState(false)
+  const [pos, setPos] = useState(null)
+  const [active, setActive] = useState(-1)
+  const btnRef = useRef(null)
+  const menuRef = useRef(null)
+  const options = collectOptions(children)
+  const current = options.find((o) => o.value === String(value ?? ''))
+
+  const place = useCallback(() => {
+    const r = btnRef.current?.getBoundingClientRect()
+    if (!r) return
+    const below = window.innerHeight - r.bottom
+    const flip = below < 260 && r.top > below
+    setPos({
+      left: r.left,
+      width: r.width,
+      ...(flip ? { bottom: window.innerHeight - r.top + 6 } : { top: r.bottom + 6 }),
+      maxHeight: Math.min(288, (flip ? r.top : below) - 16),
+    })
+  }, [])
+
+  useLayoutEffect(() => {
+    if (open) place()
+  }, [open, place])
+
+  useEffect(() => {
+    if (!open) return undefined
+    const onDown = (e) => {
+      if (btnRef.current?.contains(e.target) || menuRef.current?.contains(e.target)) return
+      setOpen(false)
+    }
+    const onScroll = (e) => {
+      if (menuRef.current?.contains(e.target)) return
+      setOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    window.addEventListener('scroll', onScroll, true)
+    window.addEventListener('resize', place)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      window.removeEventListener('scroll', onScroll, true)
+      window.removeEventListener('resize', place)
+    }
+  }, [open, place])
+
+  useEffect(() => {
+    if (open) setActive(options.findIndex((o) => o.value === String(value ?? '')))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
+  useEffect(() => {
+    if (open && active >= 0) menuRef.current?.querySelector(`[data-idx="${active}"]`)?.scrollIntoView({ block: 'nearest' })
+  }, [active, open])
+
+  const choose = (o) => {
+    if (o.disabled) return
+    onChange?.({ target: { value: o.value } })
+    setOpen(false)
+    btnRef.current?.focus()
+  }
+
+  const onKeyDown = (e) => {
+    if (!open) {
+      if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(e.key)) {
+        e.preventDefault()
+        setOpen(true)
+      }
+      return
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      e.stopPropagation()
+      setOpen(false)
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      setActive((i) => Math.min(options.length - 1, i + 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      setActive((i) => Math.max(0, i - 1))
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      if (options[active]) choose(options[active])
+    } else if (e.key === 'Tab') setOpen(false)
+  }
+
   return (
     <div className="relative">
-      <select
-        ref={ref}
-        style={{ colorScheme: 'dark', ...style }}
+      <button
+        ref={btnRef}
+        type="button"
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        onKeyDown={onKeyDown}
         className={clsx(
-          'focus-ring w-full cursor-pointer appearance-none rounded-xl border border-white/10 bg-white/[0.03] py-2 pl-3.5 pr-9 text-sm text-slate-100 transition hover:bg-white/[0.06]',
-          '[&>option]:bg-[#160e2b] [&>option]:text-slate-100',
+          'focus-ring flex w-full cursor-pointer items-center justify-between gap-2 rounded-xl border bg-white/[0.03] py-2 pl-3.5 pr-3 text-left text-sm transition duration-200 hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-50',
+          open ? 'border-brand-500/60 bg-white/[0.06]' : 'border-white/10',
+          current ? 'text-slate-100' : 'text-slate-500',
           className,
         )}
-        {...props}
       >
-        {children}
-      </select>
-      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+        <span className="truncate">{current ? current.label : placeholder}</span>
+        <ChevronDown className={clsx('h-4 w-4 shrink-0 text-slate-500 transition-transform duration-200', open && 'rotate-180 text-brand-300')} />
+      </button>
+      {open &&
+        pos &&
+        createPortal(
+          <div
+            ref={menuRef}
+            role="listbox"
+            style={pos}
+            className="select-menu fixed z-[70] overflow-y-auto rounded-xl border border-white/10 bg-ink-800/95 p-1 shadow-2xl shadow-black/60 ring-1 ring-brand-500/10 backdrop-blur-xl"
+          >
+            {options.map((o, i) => {
+              const selected = o.value === String(value ?? '')
+              return (
+                <button
+                  key={o.value + i}
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  data-idx={i}
+                  disabled={o.disabled}
+                  onMouseEnter={() => setActive(i)}
+                  onClick={() => choose(o)}
+                  className={clsx(
+                    'flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors disabled:opacity-40',
+                    selected ? 'text-brand-300' : 'text-slate-200',
+                    active === i && 'bg-brand-500/15',
+                    selected && active !== i && 'bg-white/[0.04]',
+                  )}
+                >
+                  <span className="truncate">{o.label}</span>
+                  {selected && <Check className="h-3.5 w-3.5 shrink-0" />}
+                </button>
+              )
+            })}
+          </div>,
+          document.body,
+        )}
     </div>
   )
-})
+}
 
 export const Textarea = forwardRef(function Textarea({ className, ...props }, ref) {
   return (
@@ -437,23 +579,25 @@ export function Drawer({ open, onClose, title, subtitle, children, footer }) {
   if (!open) return null
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex justify-end">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div
-        ref={ref}
-        className="glass-panel relative z-10 flex h-full w-full max-w-xl flex-col shadow-2xl shadow-black/50 sm:border-l sm:border-white/10"
-      >
-        <div className="flex items-start justify-between gap-4 border-b border-white/8 px-5 py-4">
+    <div className="drawer-enter fixed inset-0 z-50">
+      <div ref={ref} className="app-shell-bg relative z-10 flex h-full w-full flex-col">
+        <div className="flex items-start justify-between gap-4 border-b border-white/8 bg-ink-950/70 px-5 py-4 backdrop-blur-xl sm:px-8">
           <div className="min-w-0">
-            <h3 className="truncate text-base font-semibold text-white">{title}</h3>
+            <h3 className="truncate text-lg font-semibold text-white">{title}</h3>
             {subtitle && <p className="mt-0.5 truncate text-xs text-slate-400">{subtitle}</p>}
           </div>
           <IconButton onClick={onClose}>
             <X className="h-4 w-4" />
           </IconButton>
         </div>
-        <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
-        {footer && <div className="flex flex-wrap justify-end gap-2 border-t border-white/8 px-5 py-4">{footer}</div>}
+        <div className="flex-1 overflow-y-auto">
+          <div className="mx-auto w-full max-w-5xl px-5 py-6 sm:px-8">{children}</div>
+        </div>
+        {footer && (
+          <div className="border-t border-white/8 bg-ink-950/70 backdrop-blur-xl">
+            <div className="mx-auto flex w-full max-w-5xl flex-wrap justify-end gap-2 px-5 py-4 sm:px-8">{footer}</div>
+          </div>
+        )}
       </div>
     </div>,
     document.body,
@@ -698,7 +842,7 @@ export function AutoFields({ data, exclude = [], depth = 0 }) {
     return <AutoPrimitiveValue keyName="" value={data} />
   }
 
-  const entries = Object.entries(data).filter(([k]) => !AUTO_HIDDEN_KEYS.has(k) && !exclude.includes(k))
+  const entries = Object.entries(data).filter(([k, v]) => !AUTO_HIDDEN_KEYS.has(k) && !exclude.includes(k) && !(isIdKey(k) && (v == null || typeof v !== 'object')))
   if (entries.length === 0) return <p className="text-xs text-slate-500">No details available.</p>
 
   const primitive = entries.filter(([, v]) => v == null || typeof v !== 'object')

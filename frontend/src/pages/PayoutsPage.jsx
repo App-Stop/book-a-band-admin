@@ -159,7 +159,7 @@ function PayoutDetailDrawer({ payoutId, onClose, onChanged }) {
       open
       onClose={onClose}
       title="Payout detail"
-      subtitle={payout?._id}
+      subtitle={payout?.band?.fullName}
       footer={
         canRetry && (
           <Button onClick={() => setRetryConfirm(true)}>
@@ -176,7 +176,6 @@ function PayoutDetailDrawer({ payoutId, onClose, onChanged }) {
           <StatusBadge status={payout.status} />
 
           <Card className="p-4">
-            <KeyValue label="Payout ID" value={payout._id} mono />
             <KeyValue label="Band" value={payout.band?.fullName} />
             <KeyValue label="Amount" value={formatCurrency(payout.payoutAmount)} />
             <KeyValue label="Created" value={formatDateTime(payout.createdAt)} />

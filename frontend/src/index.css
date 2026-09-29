@@ -110,3 +110,14 @@
     box-shadow: 0 0 0 2px var(--color-ink-950), 0 0 0 4px var(--color-brand-500);
   }
 }
+
+@keyframes drawer-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.99); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes menu-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.drawer-enter { animation: drawer-in 0.22s ease-out; }
+.select-menu { animation: menu-in 0.14s ease-out; }

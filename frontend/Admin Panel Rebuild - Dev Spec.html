@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Panel Rebuild — Technical Spec</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --accent: #6d28d9;
+    --accent-soft: #f3ecfd;
+    --bug: #b42318;
+    --bug-soft: #fdecea;
+    --gap: #b54708;
+    --gap-soft: #fff4e5;
+    --new: #067647;
+    --new-soft: #e7f8ef;
+    --border: #e4e4e7;
+    --muted: #6b6b76;
+    --bg: #ffffff;
+    --fg: #18181b;
+    --card: #fafafa;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --accent: #a78bfa;
+      --accent-soft: #241a35;
+      --border: #2c2c33;
+      --muted: #9a9aa5;
+      --bg: #121214;
+      --fg: #ececef;
+      --card: #1a1a1d;
+      --bug-soft: #3a1a19;
+      --gap-soft: #3a2a14;
+      --new-soft: #123324;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 0 24px 100px;
+    line-height: 1.65;
+    color: var(--fg);
+    background: var(--bg);
+    font-size: 16px;
+  }
+  .doc-header {
+    padding: 56px 0 28px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 32px;
+  }
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  .doc-header h1 {
+    font-size: 2.4rem;
+    margin: 0 0 8px;
+    letter-spacing: -0.02em;
+  }
+  .subtitle {
+    font-size: 1.1rem;
+    color: var(--muted);
+    margin: 0 0 18px;
+  }
+  .meta-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .meta-chip {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--muted);
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 100px;
+  }
+  .tldr {
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    padding: 20px 24px 22px;
+    margin: 0 0 28px;
+  }
+  .tldr-title {
+    margin: 0 0 10px !important;
+    font-size: 0.95rem !important;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--accent) !important;
+    border: none !important;
+    padding: 0 !important;
+  }
+  .tldr ul { margin: 0; padding-left: 1.2em; }
+  .tldr li { margin: 6px 0; }
+  .toc {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 24px 20px;
+    margin: 0 0 40px;
+  }
+  .toc-title {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .toc ol { margin: 0; padding-left: 1.3em; columns: 2; column-gap: 24px; }
+  .toc li { margin: 4px 0; break-inside: avoid; font-size: 0.92rem; }
+  .toc a { color: var(--fg); text-decoration: none; }
+  .toc a:hover { color: var(--accent); text-decoration: underline; }
+
+  h2 {
+    font-size: 1.3rem;
+    margin-top: 3em;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--border);
+    scroll-margin-top: 20px;
+  }
+  h2:first-of-type { margin-top: 0; }
+  p { margin: 0.95em 0; }
+  a { color: var(--accent); }
+  strong { color: var(--fg); font-weight: 650; }
+  code {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 0.1em 0.4em;
+    border-radius: 5px;
+    font-size: 0.87em;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1.4em 0;
+    font-size: 0.92em;
+  }
+  th, td {
+    border: 1px solid var(--border);
+    padding: 10px 12px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: var(--card);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+  }
+  tbody tr:nth-child(even) { background: color-mix(in srgb, var(--card) 55%, transparent); }
+  ul, ol { padding-left: 1.4em; }
+  li { margin: 0.45em 0; }
+
+  ul li[data-checked] {
+    list-style: none;
+    margin: 0 0 10px -1.4em;
+    padding: 10px 14px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
+  }
+  ul li[data-checked] p { margin: 0; }
+  ul li[data-checked] input[type=checkbox] { margin-right: 8px; transform: translateY(1px); }
+  ul.bug-list li[data-checked] { border-left-color: var(--bug); }
+
+  .badge {
+    display: inline-block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 2px 7px;
+    border-radius: 5px;
+    margin-right: 4px;
+  }
+  .badge-new { color: var(--new); background: var(--new-soft); border: 1px solid var(--new); }
+  .badge-bug { color: var(--bug); background: var(--bug-soft); border: 1px solid var(--bug); }
+  .badge-gap { color: var(--gap); background: var(--gap-soft); border: 1px solid var(--gap); }
+
+  @media (max-width: 640px) {
+    .toc ol { columns: 1; }
+    .doc-header { padding-top: 32px; }
+    .doc-header h1 { font-size: 1.9rem; }
+    table, thead, tbody, th, td, tr { display: block; }
+    thead { display: none; }
+    td { border: none; border-bottom: 1px solid var(--border); padding: 6px 0; }
+    td:first-child { font-weight: 700; padding-top: 14px; }
+    tbody tr { margin-bottom: 14px; border: 1px solid var(--border); border-radius: 8px; padding: 4px 12px; }
+  }
+  @media print {
+    body { max-width: 100%; }
+    .toc, .tldr { break-inside: avoid; }
+    h2 { break-after: avoid; }
+    ul li[data-checked] { break-inside: avoid; }
+    a { color: var(--fg); text-decoration: none; }
+  }
+</style>
+</head>
+<body>
+<header class="doc-header">
+  <div class="eyebrow">Book A Band · Admin Console</div>
+  <h1>Admin Panel Rebuild</h1>
+  <p class="subtitle">Technical specification — entity-centric redesign for Users &amp; Bands</p>
+  <div class="meta-row">
+    <span class="meta-chip">Audience: Frontend + Backend</span>
+    <span class="meta-chip">2026-09-27</span>
+    <span class="meta-chip">v1</span>
+  </div>
+</header>
+<p>This spec replaces the current flat, route-per-page admin panel with an entity-centric one built around two things: a <strong>Dashboard</strong>, and a <strong>Users &amp; Bands</strong> section where clicking into a user or band shows everything about them in tabs, instead of hunting across separate pages.</p>
+<aside class="tldr">
+  <h2 class="tldr-title">At a glance</h2>
+  <ul>
+    <li>Sidebar goes from <strong>11 flat, route-mirroring pages</strong> to <strong>7</strong>, organized by how admins actually look things up.</li>
+    <li><strong>Users &amp; Bands</strong> becomes the core screen: click into a user or band and see everything about them in tabs (bookings, payments, payouts, packages, disputes, etc.) instead of hunting across pages.</li>
+    <li><strong>Bookings, Disputes, and Open Requests</strong> stay standalone and directly searchable — these are looked up by their own reference (a booking date, a case), not by the person.</li>
+    <li>Three concrete <span class="badge badge-bug" style="vertical-align:middle;">BUG</span> fixes and one <span class="badge badge-gap" style="vertical-align:middle;">GAP</span> (no Disputes page exists at all) are called out inline, verified against the live panel and the Mongoose schemas.</li>
+    <li>New: platform <strong>Revenue</strong> numbers on the Dashboard, which the panel currently shows nowhere.</li>
+  </ul>
+</aside>
+<nav class="toc">
+  <div class="toc-title">Contents</div>
+  <ol>
+    <li><a href="#goal">Goal</a></li>
+    <li><a href="#final-navigation">Final navigation</a></li>
+    <li><a href="#dashboard">Dashboard</a></li>
+    <li><a href="#revenue-missing-today">Revenue (missing today)</a></li>
+    <li><a href="#users-bands-list-view">Users &amp; Bands — list view</a></li>
+    <li><a href="#entity-detail-view-the-core-of-the-rebuild">Entity detail view</a></li>
+    <li><a href="#backend-work-required">Backend work required</a></li>
+    <li><a href="#frontend-work-required">Frontend work required</a></li>
+    <li><a href="#what-stays-separate-and-why">What stays separate, and why</a></li>
+    <li><a href="#suggested-build-order">Suggested build order</a></li>
+  </ol>
+</nav>
+
+<h2 id="goal">Goal</h2>
+<p>Stop organizing the admin panel around database tables (one nav item per backend route) and organize it around the two entities an admin actually looks up: <strong>a user</strong> and <strong>a band</strong>. Almost every admin task — &quot;what&#39;s going on with this band&quot;, &quot;why is this user complaining&quot;, &quot;where&#39;s this payout&quot; — starts from one person or one band. Right now that means checking up to 5 different pages (Users, Bookings, Payouts, Band Packages, Reports) and cross-referencing IDs by hand. The rebuild puts all of it behind one search and one detail view, in tabs.</p>
+<p>A handful of things genuinely are cross-entity queues (a report could be about any band, a support ticket about any user) — those stay as their own lighter list pages, described in <strong>What stays separate</strong> below.</p>
+<h2 id="final-navigation">Final navigation</h2>
+<p>Down from 11 flat items to 7. The split: <strong>entities</strong> (looked up by who they belong to) collapse into Users &amp; Bands; <strong>records with their own reference number</strong> (a booking, a dispute, an open request — the kind of thing a customer quotes back to support, &quot;my booking on Sept 28&quot; or &quot;case #123&quot;) keep their own searchable page, because an admin usually starts from that reference, not from the person.</p>
+<ol><li><p><strong>Dashboard</strong></p></li><li><p><strong>Users &amp; Bands</strong> — search + list → full entity detail in tabs (most day-to-day info lives here)</p></li><li><p><strong>Bookings</strong> — standalone, directly searchable by booking id, customer, band, date, status — no need to find the user first</p></li><li><p><strong>Disputes</strong> — standalone, directly searchable/filterable by status — currently has <span class="badge badge-gap">GAP</span> no admin page at all (see gap below)</p></li><li><p><strong>Open Requests</strong> — standalone, for the force-expire workflow and &quot;my request disappeared&quot; tickets</p></li><li><p><strong>Moderation</strong> — tabs: Reports · Support Tickets</p></li><li><p><strong>Payouts</strong> — ops queue, defaults to failed / needs-action</p></li></ol>
+<p>(Platform Config stays as a reference page, reachable from Settings rather than the main nav.)</p>
+<p>Band Packages, Posts &amp; Comments, Reviews, and Band Analytics still fold into the entity detail view only — nobody looks those up by their own id, they&#39;re always &quot;this band&#39;s packages&quot; or &quot;this band&#39;s posts.&quot;</p>
+<h2 id="dashboard">Dashboard</h2>
+<p>No changes needed — the current one is already right: 8 count cards (Total Users, Total Bookings, Total Payouts, Open Requests, Total Posts, Pending Reports, Band Packages, Support Messages) plus a Quick Actions list. Keep it. Optionally make each count card and quick action a link straight into the relevant filtered view (e.g. &quot;Pending Reports&quot; → Moderation tab pre-filtered to pending).</p>
+<h2 id="revenue-missing-today">Revenue (missing today)</h2>
+<p>Right now nothing on the panel tells the admin how much the platform is making — add it to the Dashboard as 2–3 numbers, not a full finance page:</p>
+<ul><li><p><strong>Platform revenue</strong> (all time) — sum of <code>platformFee</code> across <code>Payment</code>s with status <code>paid</code>/<code>succeeded</code></p></li><li><p><strong>Revenue this month</strong> — same sum, filtered to the current calendar month</p></li><li><p><strong>Held in escrow / pending payout</strong> — sum of <code>Payout.grossAmount</code> for payouts not yet in status <code>paid</code> (i.e. money collected from customers that hasn&#39;t gone to a band yet) — useful because it&#39;s the platform&#39;s outstanding liability, not revenue</p></li></ul>
+<p>Don&#39;t try to net out refunds or build a trend chart for v1 — three honest totals beat a half-right graph.</p>
+<p><strong>Backend note</strong>: there&#39;s currently no dashboard-summary endpoint at all — the live panel gets its 8 count cards by calling <code>/admin/users</code>, <code>/admin/bookings</code>, <code>/admin/payouts</code>, etc. separately with <code>limit=1</code> just to read each one&#39;s <code>pagination.total</code>. Worth adding one <code>GET /admin/dashboard-summary</code> that returns all of those counts plus the three revenue numbers in a single aggregation — cheaper for the panel to load, and revenue naturally lives there since it&#39;s not tied to any one list endpoint.</p>
+<h2 id="users-bands-list-view">Users &amp; Bands — list view</h2>
+<p>Keep the current table (it already works well): search by name/email, filter by role / status / email-verified, columns User · Role · Email · Status · Joined. One change: a row for a <code>band</code>-role user should show a small badge or subtitle with the band name, so admins can spot the band from the list without opening it — currently band accounts show as &quot;Unnamed&quot; in the list because it renders the user&#39;s <code>fullName</code>, which is often blank for band accounts (the real name lives on the <code>Bands</code> profile, not the <code>User</code> record).</p>
+<h2 id="entity-detail-view-the-core-of-the-rebuild">Entity detail view — the core of the rebuild</h2>
+<p>Clicking a row opens one detail view with tabs. The tab set adapts to whether the row is a <code>user</code>, a <code>band</code>, or both (a user who is also a band owner gets both sets of tabs). This is the same drawer pattern the current User detail and Booking detail already use — keep that visual style, just widen what it shows.</p>
+<table><thead><tr><th>Tab</th><th>Shown for</th><th>What it shows</th><th>Data source</th></tr></thead><tbody><tr><td><strong>Overview</strong></td><td>User + Band</td><td>Name, email, role, verified/active status, join date, city; for a band: bio, genres, ensemble type, price range, rating, follower count</td><td><code>GET /admin/users/:id</code> (exists) + band sub-document (exists)</td></tr><tr><td><strong>Bookings</strong></td><td>User + Band</td><td>Event date, status, band/customer, total amount, payout status — link into each booking&#39;s own mini-detail (reuse current Booking detail)</td><td><code>GET /admin/users/:id</code> already returns this array — keep</td></tr><tr><td><strong>Payments</strong></td><td>User (as customer)</td><td>Amount paid (<code>totalAmount</code>), status, paid date, refunded amount if any</td><td><code>GET /admin/users/:id</code> already returns this array — keep, but see amount field fix below</td></tr><tr><td><strong>Payouts</strong></td><td>Band</td><td>Gross amount, platform fee, payout amount, status, transferred date, failure reason if failed</td><td><span class="badge badge-new">NEW</span> not currently in the user-detail bundle at all — add a <code>Payout.find({ band })</code> lookup</td></tr><tr><td><strong>Packages</strong></td><td>Band</td><td>Title, price, duration, active/inactive, features</td><td><span class="badge badge-new">NEW</span> add <code>BandPackage.find({ bandId })</code></td></tr><tr><td><strong>Reviews</strong></td><td>Band</td><td>Rating, review text, event name, reviewer, date, flagged/reported status</td><td><span class="badge badge-new">NEW</span> add <code>Review.find({ bandId, isDeleted: false })</code></td></tr><tr><td><strong>Posts</strong></td><td>Band</td><td>Caption, likes, views, comments, shares, posted date, deleted status</td><td><span class="badge badge-new">NEW</span> add <code>Post.find({ band })</code>, reuse existing admin Posts data shape</td></tr><tr><td><strong>Disputes</strong></td><td>User + Band</td><td>Booking reference, status, opened date, resolution</td><td><code>GET /admin/users/:id</code> already returns this array — keep</td></tr><tr><td><strong>Availability &amp; Requests</strong></td><td>User + Band</td><td>Availability requests (user), open requests participated in + offers submitted (band)</td><td>Availability requests already returned; open-request participation is <strong>new</strong> — reuse the aggregation already written in <code>getBandAnalytics</code> rather than duplicating it</td></tr></tbody></table>
+<p>Each row with a count (Bookings 3, Payouts 1, Disputes 0 — like the current User detail already does) so the admin can see at a glance which tabs have anything in them, without opening each one.</p>
+<h2 id="backend-work-required">Backend work required</h2>
+<p>All in <code>services/AdminService.js</code> / <code>routes/Admin-Route.js</code>:</p>
+<ul><li data-checked="false"><p><input type="checkbox" disabled> Extend <code>getUserById</code> to also return, when the user has a band: <code>payouts</code> (<code>Payout.find({ band: band._id })</code>), <code>packages</code> (<code>BandPackage.find({ bandId: band._id })</code>), <code>reviews</code> (<code>Review.find({ bandId: band._id, isDeleted: false })</code>), <code>posts</code> (<code>Post.find({ band: band._id })</code>) — same pattern as the existing <code>bookings</code>/<code>payments</code>/<code>disputes</code> bundle, capped and sorted the same way</p></li><li data-checked="false"><p><input type="checkbox" disabled> Add open-request participation to that same bundle for band accounts — reuse the aggregation from <code>getBandAnalytics</code> (<code>services/AdminService.js</code>) instead of writing a second version</p></li><li data-checked="false"><p><input type="checkbox" disabled> Fix the payout amount field: the frontend needs <code>payoutAmount</code> (net to band), <code>grossAmount</code>, and <code>platformFee</code> — all already on the <code>Payout</code> model, just confirm the admin payout endpoints return them (they do — the bug is frontend-side, see below) and document the field names for the frontend dev</p></li><li data-checked="false"><p><input type="checkbox" disabled> Same for <code>Payment</code>: the amount field is <code>totalAmount</code>, not <code>amount</code> — confirm and document</p></li><li data-checked="false"><p><input type="checkbox" disabled> <code>listUsers</code> (or a lightweight join) should expose the band&#39;s <code>fullName</code> for band-role users, so the list view doesn&#39;t show &quot;Unnamed&quot; — currently only the <code>User.fullName</code> is selected, which is frequently blank for band accounts</p></li><li data-checked="false"><p><input type="checkbox" disabled> Add <code>GET /admin/disputes</code> (list, filter by <code>status</code>/<code>band</code>/<code>customer</code>, paginated) and <code>GET /admin/disputes/:id</code> — <span class="badge badge-gap">GAP</span> no dispute route exists today; disputes are only reachable buried inside <code>getUserById</code>/<code>getBookingById</code>, so there&#39;s no way to triage open disputes as a queue</p></li><li data-checked="false"><p><input type="checkbox" disabled> Add a <code>GET /admin/dashboard-summary</code> endpoint returning all the Dashboard&#39;s count cards plus the three revenue numbers in one aggregation: platform revenue all-time and this-month (<code>Payment.aggregate</code>, sum <code>platformFee</code> where <code>status</code> in <code>paid</code>/<code>succeeded</code>), and escrow held (<code>Payout.aggregate</code>, sum <code>grossAmount</code> where <code>status</code> != <code>paid</code>) — replaces the current pattern of the panel calling ~8 separate list endpoints with <code>limit=1</code> just to read each one&#39;s <code>pagination.total</code></p></li><li data-checked="false"><p><input type="checkbox" disabled> The backend list endpoints themselves (<code>/admin/bookings</code>, <code>/admin/open-requests</code>, <code>/admin/band-packages</code>, <code>/admin/posts</code>) don&#39;t need to change for the nav restructure — the standalone pages and the entity-detail tabs call the same endpoints, just with different filters (<code>band</code>/<code>user</code> query params already supported)</p></li></ul>
+<h2 id="frontend-work-required">Frontend work required</h2>
+<p><strong>Structural:</strong></p>
+<ul><li data-checked="false"><p><input type="checkbox" disabled> Collapse Posts &amp; Comments, Band Packages, and Band Analytics out of the sidebar; rebuild as tabs on the Users &amp; Bands entity detail view (spec above)</p></li><li data-checked="false"><p><input type="checkbox" disabled> Keep Bookings as its own standalone, directly-searchable page — search/filter by booking id, customer, band, date, status. Admins usually start from a booking reference (a support ticket, a customer email), not from the user</p></li><li data-checked="false"><p><input type="checkbox" disabled> Build a new standalone Disputes page — doesn&#39;t exist on the panel today at all; filter by status, search by booking/customer/band</p></li><li data-checked="false"><p><input type="checkbox" disabled> Keep Open Requests as its own standalone page (force-expire workflow, &quot;my request disappeared&quot; tickets) rather than folding it into entity tabs</p></li><li data-checked="false"><p><input type="checkbox" disabled> Merge Reports + Support Tickets into one &quot;Moderation&quot; page with two tabs</p></li><li data-checked="false"><p><input type="checkbox" disabled> Keep a standalone Payouts page, but as an ops queue: default filter to <code>failed</code> / <code>waiting_onboarding</code>, with &quot;all payouts&quot; as a secondary filter, not the default</p></li><li data-checked="false"><p><input type="checkbox" disabled> Add the Revenue numbers to the Dashboard (platform revenue all-time, this month, held-in-escrow — see Revenue section above)</p></li></ul>
+<p><strong>Bug fixes found while reviewing the live panel:</strong></p>
+<ul class="bug-list"><li data-checked="false"><p><span class="badge badge-bug">BUG</span> <input type="checkbox" disabled> <strong>Payout/payment amounts show &quot;—&quot;</strong>: the UI is reading a field like <code>amount</code> that doesn&#39;t exist on either model. Read <code>payoutAmount</code> (Payouts) and <code>totalAmount</code> (Payments/Bookings) instead — confirmed by reading the actual Mongoose schemas</p></li><li data-checked="false"><p><span class="badge badge-bug">BUG</span> <input type="checkbox" disabled> <strong>Booking status badge renders blank</strong>: the status label map only covers 5 values (<code>pending</code>, <code>confirmed</code>, <code>completed</code>, <code>cancelled</code>, <code>expired</code>), but <code>bookingStatus</code> actually has 10: <code>pending_payment</code>, <code>confirmed</code>, <code>in_progress</code>, <code>completed</code>, <code>holding_funds</code>, <code>paid_out</code>, <code>disputed</code>, <code>cancelled</code>, <code>refunded</code>, <code>expired</code> (<code>constants/bookingStatus.js</code>). Any booking in one of the missing 5 statuses shows a blank badge. Add all 10 to the label/color map</p></li><li data-checked="false"><p><span class="badge badge-bug">BUG</span> <input type="checkbox" disabled> <strong>Inconsistent filter controls</strong>: the Payouts page&#39;s status filter is a free-text box (&quot;Status (e.g. failed)&quot;); every other page uses a dropdown. Make Payouts a dropdown too, sourced from the same status enum</p></li><li data-checked="false"><p><span class="badge badge-bug">BUG</span> <input type="checkbox" disabled> <strong>Reports table overflows its container</strong> at normal desktop width — the Status column is cut off, requiring horizontal scroll. Needs a responsive fix (narrower columns, or wrap into the row like the entity-detail tabs do)</p></li></ul>
+<h2 id="what-stays-separate-and-why">What stays separate, and why</h2>
+<p>Two different reasons something doesn&#39;t fold fully into the entity view:</p>
+<p><strong>Looked up by their own reference, not by the person</strong> — a customer quotes a booking date or a dispute back to support before anyone knows whose account it is. These need their own directly-searchable page even though they <em>also</em> show up inside the relevant user&#39;s/band&#39;s tabs:</p>
+<ul><li><p><strong>Bookings</strong></p></li><li><p><strong>Disputes</strong></p></li><li><p><strong>Open Requests</strong></p></li></ul>
+<p><strong>Queues of things to decide on, not facts about one entity</strong> — an admin opens these without already knowing who&#39;s involved:</p>
+<ul><li><p><strong>Reports</strong> — something was flagged before you know whose content it is</p></li><li><p><strong>Support Tickets</strong> — a message arrives; you don&#39;t start from a profile</p></li><li><p><strong>Payouts (ops queue)</strong> — &quot;which payouts are stuck&quot; is cross-band triage, even though a band&#39;s full payout history still lives on that band&#39;s Payouts tab</p></li></ul>
+<p>Everything else — Band Packages, Posts, Reviews, Band Analytics — really is just information <em>about</em> a specific band, so it only needs to live on that band&#39;s page.</p>
+<h2 id="suggested-build-order">Suggested build order</h2>
+<ol><li><p><strong>Backend</strong>: extend <code>getUserById</code> with payouts/packages/reviews/posts, fix the amount field documentation, add the band <code>fullName</code> fix to <code>listUsers</code></p></li><li><p><strong>Frontend</strong>: fix the three standalone bugs (amounts, status badges, Reports overflow) — quick wins, ship independently of the rest</p></li><li><p><strong>Frontend</strong>: build the tabbed entity detail view against the extended endpoint</p></li><li><p><strong>Frontend</strong>: remove the now-redundant sidebar items, merge Reports + Support into Moderation</p></li><li><p><strong>Both</strong>: re-point the Dashboard&#39;s count cards / quick actions at the new locations</p></li></ol>
+</body>
+</html>

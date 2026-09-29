@@ -212,7 +212,7 @@ function ReportDetailDrawer({ report, onClose, onResolved }) {
       open
       onClose={onClose}
       title="Report detail"
-      subtitle={report._id}
+      // subtitle={report._id}
       footer={
         isPending && (
           <>
@@ -243,8 +243,8 @@ function ReportDetailDrawer({ report, onClose, onResolved }) {
         </Card>
 
         <Card className="p-4">
-          <KeyValue label="Report ID" value={report._id} mono />
-          <KeyValue label="Reported by" value={report.reportedBy?.fullName} />
+          {/* <KeyValue label="Report ID" value={report._id} mono />*/}
+          {/* <KeyValue label="Reported by" value={report.reportedBy?.fullName} />*/}
           <KeyValue label="Reporter email" value={report.reportedBy?.email} />
           <KeyValue label="Reported" value={formatDateTime(report.createdAt)} />
           {report.resolvedBy && <KeyValue label="Resolved by" value={report.resolvedBy?.fullName} />}

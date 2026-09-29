@@ -170,7 +170,7 @@ function OpenRequestDrawer({ request, onClose, onExpire }) {
       open
       onClose={onClose}
       title="Open request detail"
-      subtitle={request._id}
+      // subtitle={request._id}
       footer={
         request.status === 'open' && (
           <Button variant="danger" onClick={() => onExpire(request)}>
@@ -183,7 +183,7 @@ function OpenRequestDrawer({ request, onClose, onExpire }) {
         <StatusBadge status={request.status} />
 
         <Card className="p-4">
-          <KeyValue label="Request ID" value={request._id} mono />
+          {/* <KeyValue label="Request ID" value={request._id} mono />*/}
           <KeyValue label="Requester" value={request.user?.fullName} />
           <KeyValue label="Requester email" value={request.user?.email} />
           <KeyValue label="Created" value={formatDateTime(request.createdAt)} />

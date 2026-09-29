@@ -238,7 +238,7 @@ function BookingDetailDrawer({ bookingId, onClose, onChanged }) {
       open
       onClose={onClose}
       title="Booking detail"
-      subtitle={booking?._id}
+      // subtitle={booking?._id}
       footer={
         booking && (
           <>
@@ -266,7 +266,7 @@ function BookingDetailDrawer({ bookingId, onClose, onChanged }) {
           </div>
 
           <Card className="p-4">
-            <KeyValue label="Booking ID" value={booking._id} mono />
+            {/* <KeyValue label="Booking ID" value={booking._id} mono />*/}
             <KeyValue label="Customer" value={booking.user?.fullName} />
             <KeyValue label="Customer email" value={booking.user?.email} />
             <KeyValue label="Band" value={booking.band?.fullName} />
@@ -281,7 +281,7 @@ function BookingDetailDrawer({ bookingId, onClose, onChanged }) {
               <SectionTitle>Payment</SectionTitle>
               <KeyValue label="Amount" value={formatCurrency(detail.payment.totalAmount)} />
               <KeyValue label="Status" value={<StatusBadge status={detail.payment.status} />} />
-              <KeyValue label="Payment ID" value={detail.payment._id} mono />
+              {/* <KeyValue label="Payment ID" value={detail.payment._id} mono />*/}
             </Card>
           )}
 
@@ -290,7 +290,7 @@ function BookingDetailDrawer({ bookingId, onClose, onChanged }) {
               <SectionTitle>Payout</SectionTitle>
               <KeyValue label="Amount" value={formatCurrency(detail.payout.payoutAmount)} />
               <KeyValue label="Status" value={<StatusBadge status={detail.payout.status} />} />
-              <KeyValue label="Payout ID" value={detail.payout._id} mono />
+              {/* <KeyValue label="Payout ID" value={detail.payout._id} mono />*/}
             </Card>
           )}
 

@@ -327,7 +327,7 @@ function UserDetailDrawer({ userId, onClose, onChanged }) {
           {tab === 'overview' && (
             <div className="space-y-4">
               <Card className="p-4">
-                <KeyValue label="User ID" value={user._id} mono />
+                {/* <KeyValue label="User ID" value={user._id} mono />*/}
                 <KeyValue label="Full name" value={user.fullName} />
                 <KeyValue label="Email" value={user.email} />
                 <KeyValue label="Active role" value={user.activeRole ? titleCase(user.activeRole) : '—'} />
@@ -464,7 +464,7 @@ function RecordList({ items, type }) {
           {type === 'booking' && (
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <p className="truncate text-sm text-slate-200">{item.band?.fullName || item.city || item._id}</p>
+                <p className="truncate text-sm text-slate-200">{item.band?.fullName || item.city || 'Booking'}</p>
                 <p className="text-xs text-slate-500">
                   {formatDate(item.eventDate || item.createdAt)}
                   {item.paymentStatus && ` · Payment: ${titleCase(item.paymentStatus)}`}
@@ -508,13 +508,13 @@ function RecordList({ items, type }) {
           )}
           {type === 'dispute' && (
             <div className="flex items-center justify-between gap-2">
-              <p className="truncate text-sm text-slate-200">{item.reason || item._id}</p>
+              <p className="truncate text-sm text-slate-200">{item.reason || 'Dispute'}</p>
               <StatusBadge status={item.status} />
             </div>
           )}
           {type === 'availability' && (
             <div className="flex items-center justify-between gap-2">
-              <p className="truncate text-sm text-slate-200">{item.city || item._id}</p>
+              <p className="truncate text-sm text-slate-200">{item.city || 'Availability'}</p>
               <StatusBadge status={item.status} />
             </div>
           )}
