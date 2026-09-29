@@ -99,7 +99,7 @@ export default function ConfigPage() {
   )
 }
 
-const HIDDEN_POLICY_KEY = /cron|escrow.?release/i
+const HIDDEN_POLICY_KEY = /cron|escrow.?release|response.?window/i
 
 function stripHidden(value) {
   if (Array.isArray(value)) return value.map(stripHidden)

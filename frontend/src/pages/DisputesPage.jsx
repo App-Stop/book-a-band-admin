@@ -7,6 +7,8 @@ import {
   EmptyState,
   FilterBar,
   Field,
+  PersonCell,
+  ProfileCard,
   KeyValue,
   Drawer,
   LoadingBlock,
@@ -65,14 +67,9 @@ export default function DisputesPage() {
     {
       key: 'customer',
       header: 'Customer',
-      render: (d) => (
-        <div>
-          <p className="text-sm font-medium text-slate-100">{d.customer?.fullName || '—'}</p>
-          <p className="text-xs text-slate-500">{d.customer?.email}</p>
-        </div>
-      ),
+      render: (d) => <PersonCell person={d.customer} />,
     },
-    { key: 'band', header: 'Band', render: (d) => d.band?.fullName || '—' },
+    { key: 'band', header: 'Band', render: (d) => <PersonCell person={d.band} role="band" /> },
     { key: 'booking', header: 'Event date', render: (d) => formatDate(d.booking?.eventDate) },
     { key: 'amount', header: 'Booking total', render: (d) => formatCurrency(d.booking?.totalAmount) },
     { key: 'status', header: 'Status', className: 'whitespace-nowrap', render: (d) => <StatusBadge status={d.status} /> },
@@ -155,20 +152,13 @@ function DisputeDetailDrawer({ disputeId, onClose }) {
         <div className="space-y-5">
           <StatusBadge status={dispute.status} />
 
-          <Card className="p-4">
-            <SectionTitle>Customer</SectionTitle>
-            <KeyValue label="Name" value={dispute.customer?.fullName} />
-            <KeyValue label="Email" value={dispute.customer?.email} />
-          </Card>
-
-          <Card className="p-4">
-            <SectionTitle>Band</SectionTitle>
-            <KeyValue label="Name" value={dispute.band?.fullName} />
-          </Card>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <ProfileCard label="Customer" person={dispute.customer} />
+            <ProfileCard label="Band" person={dispute.band} />
+          </div>
 
           <Card className="p-4">
             <SectionTitle>Booking</SectionTitle>
-            <KeyValue label="Customer" value={dispute.customer?.fullName} />
             <KeyValue label="Event date" value={formatDate(dispute.booking?.eventDate)} />
             <KeyValue label="Booking status" value={<StatusBadge status={dispute.booking?.bookingStatus} />} />
             <KeyValue label="Total amount" value={formatCurrency(dispute.booking?.totalAmount)} />

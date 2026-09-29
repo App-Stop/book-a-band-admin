@@ -10,6 +10,8 @@ import {
   EmptyState,
   FilterBar,
   Field,
+  PersonCell,
+  ProfileCard,
   KeyValue,
   LoadingBlock,
   Pagination,
@@ -56,7 +58,7 @@ export default function PayoutsPage() {
   }
 
   const columns = [
-    { key: 'band', header: 'Band', render: (p) => p.band?.fullName || '—' },
+    { key: 'band', header: 'Band', render: (p) => <PersonCell person={p.band} role="band" /> },
     { key: 'event', header: 'Event', render: (p) => p.booking?.city || '—' },
     { key: 'eventDate', header: 'Event date', render: (p) => formatDate(p.booking?.eventDate) },
     { key: 'amount', header: 'Amount', render: (p) => formatCurrency(p.payoutAmount) },
@@ -177,8 +179,9 @@ function PayoutDetailDrawer({ payoutId, onClose, onChanged }) {
         <div className="space-y-5">
           <StatusBadge status={payout.status} />
 
+          <ProfileCard label="Band" person={payout.band} />
+
           <Card className="p-4">
-            <KeyValue label="Band" value={payout.band?.fullName} />
             <KeyValue label="Amount" value={formatCurrency(payout.payoutAmount)} />
             <KeyValue label="Created" value={formatDateTime(payout.createdAt)} />
           </Card>

@@ -9,6 +9,8 @@ import {
   Drawer,
   EmptyState,
   FilterBar,
+  PersonCell,
+  ProfileCard,
   KeyValue,
   Pagination,
   StatusBadge,
@@ -66,12 +68,7 @@ export default function OpenRequestsPage() {
     {
       key: 'requester',
       header: 'Requester',
-      render: (r) => (
-        <div>
-          <p className="text-sm font-medium text-slate-100">{r.user?.fullName || '—'}</p>
-          <p className="text-xs text-slate-500">{r.user?.email}</p>
-        </div>
-      ),
+      render: (r) => <PersonCell person={r.user} />,
     },
     { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
     { key: 'created', header: 'Created', render: (r) => formatDateTime(r.createdAt) },
@@ -179,10 +176,9 @@ function OpenRequestDrawer({ request, onClose, onExpire }) {
       <div className="space-y-5">
         <StatusBadge status={request.status} />
 
+        <ProfileCard label="Requester" person={request.user} />
+
         <Card className="p-4">
-          {/* <KeyValue label="Request ID" value={request._id} mono />*/}
-          <KeyValue label="Requester" value={request.user?.fullName} />
-          <KeyValue label="Requester email" value={request.user?.email} />
           <KeyValue label="Created" value={formatDateTime(request.createdAt)} />
           {request.updatedAt && <KeyValue label="Last updated" value={formatDateTime(request.updatedAt)} />}
         </Card>

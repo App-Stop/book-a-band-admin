@@ -10,6 +10,8 @@ import {
   EmptyState,
   FilterBar,
   Field,
+  PersonCell,
+  ProfileCard,
   KeyValue,
   LoadingBlock,
   Pagination,
@@ -81,14 +83,9 @@ export default function BookingsPage() {
     {
       key: 'customer',
       header: 'Customer',
-      render: (b) => (
-        <div>
-          <p className="text-sm font-medium text-slate-100">{b.user?.fullName || '—'}</p>
-          <p className="text-xs text-slate-500">{b.user?.email}</p>
-        </div>
-      ),
+      render: (b) => <PersonCell person={b.user} />,
     },
-    { key: 'band', header: 'Band', render: (b) => b.band?.fullName || '—' },
+    { key: 'band', header: 'Band', render: (b) => <PersonCell person={b.band} role="band" /> },
     { key: 'status', header: 'Status', render: (b) => <StatusBadge status={b.bookingStatus} /> },
     { key: 'eventDate', header: 'Event date', render: (b) => formatDate(b.eventDate) },
     {
@@ -243,11 +240,12 @@ function BookingDetailDrawer({ bookingId, onClose, onChanged }) {
             <StatusBadge status={booking.bookingStatus} />
           </div>
 
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <ProfileCard label="Customer" person={booking.user} />
+            <ProfileCard label="Band" person={booking.band} />
+          </div>
+
           <Card className="p-4">
-            {/* <KeyValue label="Booking ID" value={booking._id} mono />*/}
-            <KeyValue label="Customer" value={booking.user?.fullName} />
-            <KeyValue label="Customer email" value={booking.user?.email} />
-            <KeyValue label="Band" value={booking.band?.fullName} />
             <KeyValue label="Event date" value={formatDate(booking.eventDate)} />
             <KeyValue label="Event time" value={formatTimeRange(booking.eventStart, booking.eventEnd)} />
             <KeyValue label="City" value={booking.city} />

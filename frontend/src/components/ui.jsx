@@ -671,7 +671,7 @@ export function SectionTitle({ children, action }) {
 
 export function Avatar({ src, name, size = 'md', className }) {
   const [failed, setFailed] = useState(false)
-  const sizes = { sm: 'h-8 w-8 text-[11px]', md: 'h-10 w-10 text-sm', xl: 'h-24 w-24 text-3xl' }
+  const sizes = { sm: 'h-8 w-8 text-[11px]', md: 'h-10 w-10 text-sm', lg: 'h-16 w-16 text-xl', xl: 'h-24 w-24 text-3xl' }
   useEffect(() => setFailed(false), [src])
   return (
     <div
@@ -687,6 +687,80 @@ export function Avatar({ src, name, size = 'md', className }) {
         initials(name)
       )}
     </div>
+  )
+}
+
+const pictureCache = new Map()
+
+/**
+ * List endpoints only populate {fullName, email}, so look the picture up lazily
+ * (users by id, bands by name) and cache the result per person.
+ */
+function resolvePicture(person, role) {
+  const key = role === 'band' || !person._id ? `name:${role}:${person.fullName}` : `id:${person._id}`
+  if (!pictureCache.has(key)) {
+    const request =
+      key.startsWith('id:')
+        ? UsersAPI.get(person._id).then((res) => res.data?.user?.profilePicture || res.data?.band?.profilePicture || null)
+        : UsersAPI.list({ search: person.fullName, limit: 10 }).then((res) => {
+            const items = res.data?.items || []
+            const hit = items.find((u) => (u.bandProfile?.fullName || u.fullName) === person.fullName) || null
+            return hit?.bandProfile?.profilePicture || hit?.profilePicture || null
+          })
+    pictureCache.set(key, request.catch(() => null))
+  }
+  return pictureCache.get(key)
+}
+
+function usePersonPicture(person, role) {
+  const [pic, setPic] = useState(person?.profilePicture || null)
+  const id = person?._id
+  const name = person?.fullName
+  useEffect(() => {
+    if (!person) return undefined
+    if (person.profilePicture) {
+      setPic(person.profilePicture)
+      return undefined
+    }
+    if (!id && !name) return undefined
+    let alive = true
+    resolvePicture(person, role).then((url) => alive && setPic(url))
+    return () => {
+      alive = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, name, role, person?.profilePicture])
+  return pic
+}
+
+/** Compact avatar + name + email, for table cells. */
+export function PersonCell({ person, role = 'user', fallback = '—' }) {
+  const pic = usePersonPicture(person, role)
+  if (!person) return <span className="text-slate-500">{fallback}</span>
+  return (
+    <div className="flex items-center gap-3">
+      <Avatar size="sm" src={pic} name={person.fullName || person.email} />
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium text-slate-100">{person.fullName || 'Unnamed'}</p>
+        {person.email && <p className="truncate text-xs text-slate-500">{person.email}</p>}
+      </div>
+    </div>
+  )
+}
+
+/** Profile card used in drawers: big round picture, name, email, role label. */
+export function ProfileCard({ label, person, role }) {
+  const pic = usePersonPicture(person, role || (label === 'Band' ? 'band' : 'user'))
+  if (!person) return null
+  return (
+    <Card className="flex items-center gap-4 p-4">
+      <Avatar size="lg" src={pic} name={person.fullName || person.email} className="ring-4 ring-brand-500/10" />
+      <div className="min-w-0">
+        {label && <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-600">{label}</p>}
+        <p className="truncate text-lg font-semibold text-slate-100">{person.fullName || 'Unnamed'}</p>
+        {person.email && <p className="truncate text-sm text-slate-500">{person.email}</p>}
+      </div>
+    </Card>
   )
 }
 
@@ -756,7 +830,7 @@ export function FilterBar({ search, onSearch, placeholder, fields, values, onCha
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center justify-end gap-2">
         {onSearch && (
           <div className="w-full sm:max-w-xs">
             <SearchInput value={search} onChange={(e) => onSearch(e.target.value)} placeholder={placeholder} className="!py-1.5" />
@@ -819,7 +893,7 @@ export function FilterBar({ search, onSearch, placeholder, fields, values, onCha
       </div>
 
       {(active.length > 0 || (onSearch && search)) && (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           {onSearch && search && (
             <FilterTag onRemove={() => onSearch('')}>Search: “{search}”</FilterTag>
           )}
