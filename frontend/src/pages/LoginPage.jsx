@@ -36,7 +36,7 @@ export default function LoginPage() {
             <img src="/Vector.png" alt="" className="h-7 w-7 object-contain" />
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            BookABand
+            Book A Band
           </h1>
           <p className="mt-1 text-sm">Admin console sign in</p>
         </div>
