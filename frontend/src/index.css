@@ -155,3 +155,17 @@
 .on-purple .focus-ring:focus-visible {
   box-shadow: 0 0 0 2px #4c1d95, 0 0 0 4px #ffffff;
 }
+
+/* Keep browser autofill from recolouring inputs */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+  box-shadow: 0 0 0 1000px #ffffff inset !important;
+  -webkit-text-fill-color: #0f172a !important;
+  caret-color: #0f172a;
+  transition: background-color 9999s ease-in-out 0s;
+}
