@@ -1,21 +1,21 @@
 import { Children, Fragment, forwardRef, isValidElement, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
-import { ArrowUpRight, Check, ChevronDown, ChevronLeft, ChevronRight, ExternalLink as ExternalLinkIcon, Loader2, Search, X } from 'lucide-react'
+import { SlidersHorizontal, ArrowUpRight, Check, ChevronDown, ChevronLeft, ChevronRight, ExternalLink as ExternalLinkIcon, Loader2, Search, X } from 'lucide-react'
 import { clsx } from 'clsx'
-import { formatCurrency, formatDateTime, formatNumber, isUrl, titleCase, toDate } from '../lib/formatters'
+import { formatCurrency, formatDate, formatDateTime, formatNumber, initials, isUrl, titleCase, toDate } from '../lib/formatters'
 import { UsersAPI } from '../lib/api'
 
 /* ----------------------------- Buttons ----------------------------- */
 
 const BUTTON_VARIANTS = {
   primary:
-    'brand-gradient text-white shadow-lg shadow-brand-600/25 hover:brightness-110 active:brightness-95',
+    'brand-gradient text-white shadow-sm shadow-brand-600/25 hover:brightness-110 active:brightness-95',
   secondary:
-    'glass-card text-slate-100 hover:bg-white/[0.08] border-white/10',
-  ghost: 'text-slate-300 hover:text-white hover:bg-white/5',
+    'glass-card text-slate-800 hover:bg-slate-50 border-slate-900/10',
+  ghost: 'text-slate-300 hover:text-slate-900 hover:bg-slate-900/5',
   danger: 'bg-danger-500/15 text-danger-300 border border-danger-500/30 hover:bg-danger-500/25',
-  outline: 'border border-white/15 text-slate-200 hover:bg-white/5',
+  outline: 'border border-slate-900/15 text-slate-200 hover:bg-slate-900/5',
 }
 
 export const Button = forwardRef(function Button(
@@ -31,6 +31,7 @@ export const Button = forwardRef(function Button(
     <Comp
       ref={ref}
       disabled={disabled || loading}
+      data-variant={variant}
       className={clsx(
         'focus-ring inline-flex items-center justify-center rounded-xl font-medium transition disabled:cursor-not-allowed disabled:opacity-50',
         BUTTON_VARIANTS[variant],
@@ -50,7 +51,7 @@ export function IconButton({ className, children, ...props }) {
     <button
       type="button"
       className={clsx(
-        'focus-ring inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-300 transition hover:bg-white/10 hover:text-white',
+        'focus-ring inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-300 transition hover:bg-slate-900/10 hover:text-slate-900',
         className,
       )}
       {...props}
@@ -72,17 +73,17 @@ export function Card({ className, children, ...props }) {
 
 export function StatCard({ icon: Icon, label, value, hint, accent = 'brand' }) {
   const accents = {
-    brand: 'from-brand-500/25 to-brand-700/10 text-brand-300',
-    accent: 'from-accent-500/25 to-accent-600/10 text-accent-300',
-    success: 'from-success-500/25 to-success-500/5 text-success-400',
-    warning: 'from-warning-500/25 to-warning-500/5 text-warning-400',
-    info: 'from-info-500/25 to-info-500/5 text-info-400',
+    brand: 'bg-brand-500/10 text-brand-600',
+    accent: 'bg-accent-500/10 text-accent-500',
+    success: 'bg-success-500/10 text-success-400',
+    warning: 'bg-warning-500/10 text-warning-400',
+    info: 'bg-info-500/10 text-info-400',
   }
   return (
     <Card className="flex items-center gap-4 p-4 sm:p-5">
       <div
         className={clsx(
-          'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br',
+          'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl',
           accents[accent],
         )}
       >
@@ -90,7 +91,7 @@ export function StatCard({ icon: Icon, label, value, hint, accent = 'brand' }) {
       </div>
       <div className="min-w-0">
         <p className="truncate text-xs font-medium uppercase tracking-wide text-slate-400">{label}</p>
-        <p className="text-xl font-semibold text-white sm:text-2xl">{value}</p>
+        <p className="text-xl font-semibold text-slate-900 sm:text-2xl">{value}</p>
         {hint && <p className="truncate text-xs text-slate-500">{hint}</p>}
       </div>
     </Card>
@@ -128,7 +129,7 @@ const TONE_CLASSES = {
   danger: 'bg-danger-500/15 text-danger-400 border-danger-500/30',
   warning: 'bg-warning-500/15 text-warning-400 border-warning-500/30',
   info: 'bg-info-500/15 text-info-400 border-info-500/30',
-  neutral: 'bg-white/8 text-slate-300 border-white/15',
+  neutral: 'bg-slate-900/8 text-slate-300 border-slate-900/15',
 }
 
 export function Badge({ children, tone = 'neutral', className }) {
@@ -163,7 +164,7 @@ export const TextInput = forwardRef(function TextInput({ className, icon: Icon, 
       <input
         ref={ref}
         className={clsx(
-          'focus-ring w-full rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2 text-sm text-slate-100 placeholder:text-slate-500',
+          'focus-ring w-full rounded-xl border border-slate-900/10 bg-slate-900/[0.03] px-3.5 py-2 text-sm text-slate-100 placeholder:text-slate-500',
           Icon && 'pl-9',
           className,
         )}
@@ -304,8 +305,8 @@ export function Select({ className, children, value, onChange, disabled, placeho
         onClick={() => setOpen((o) => !o)}
         onKeyDown={onKeyDown}
         className={clsx(
-          'focus-ring flex w-full cursor-pointer items-center justify-between gap-2 rounded-xl border bg-white/[0.03] py-2 pl-3.5 pr-3 text-left text-sm transition duration-200 hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-50',
-          open ? 'border-brand-500/60 bg-white/[0.06]' : 'border-white/10',
+          'focus-ring flex w-full cursor-pointer items-center justify-between gap-2 rounded-xl border bg-slate-900/[0.03] py-2 pl-3.5 pr-3 text-left text-sm transition duration-200 hover:bg-slate-900/[0.06] disabled:cursor-not-allowed disabled:opacity-50',
+          open ? 'border-brand-500/60 bg-slate-900/[0.06]' : 'border-slate-900/10',
           current ? 'text-slate-100' : 'text-slate-500',
           className,
         )}
@@ -320,7 +321,7 @@ export function Select({ className, children, value, onChange, disabled, placeho
             ref={menuRef}
             role="listbox"
             style={pos}
-            className="select-menu fixed z-[70] overflow-y-auto rounded-xl border border-white/10 bg-ink-800/95 p-1 shadow-2xl shadow-black/60 ring-1 ring-brand-500/10 backdrop-blur-xl"
+            className="select-menu fixed z-[70] overflow-y-auto rounded-xl border border-slate-900/10 bg-white p-1 shadow-xl shadow-slate-900/15"
           >
             {options.map((o, i) => {
               const selected = o.value === String(value ?? '')
@@ -338,7 +339,7 @@ export function Select({ className, children, value, onChange, disabled, placeho
                     'flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors disabled:opacity-40',
                     selected ? 'text-brand-300' : 'text-slate-200',
                     active === i && 'bg-brand-500/15',
-                    selected && active !== i && 'bg-white/[0.04]',
+                    selected && active !== i && 'bg-slate-900/[0.04]',
                   )}
                 >
                   <span className="truncate">{o.label}</span>
@@ -358,7 +359,7 @@ export const Textarea = forwardRef(function Textarea({ className, ...props }, re
     <textarea
       ref={ref}
       className={clsx(
-        'focus-ring w-full rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2 text-sm text-slate-100 placeholder:text-slate-500',
+        'focus-ring w-full rounded-xl border border-slate-900/10 bg-slate-900/[0.03] px-3.5 py-2 text-sm text-slate-100 placeholder:text-slate-500',
         className,
       )}
       {...props}
@@ -395,7 +396,7 @@ export function EmptyState({ icon: Icon, title = 'Nothing here yet', description
   return (
     <div className="flex flex-col items-center justify-center gap-2 py-16 text-center text-slate-400">
       {Icon && (
-        <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-white/5">
+        <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-slate-900/5">
           <Icon className="h-6 w-6 text-slate-500" />
         </div>
       )}
@@ -423,7 +424,7 @@ export function Pagination({ page, totalPages, total, limit, onPageChange }) {
   const end = Math.min(page * limit, total)
 
   return (
-    <div className="flex flex-col items-center justify-between gap-3 border-t border-white/8 px-4 py-3 sm:flex-row">
+    <div className="flex flex-col items-center justify-between gap-3 border-t border-slate-900/8 px-4 py-3 sm:flex-row">
       <p className="text-xs text-slate-500">
         Showing <span className="text-slate-300">{start}</span>–<span className="text-slate-300">{end}</span> of{' '}
         <span className="text-slate-300">{total}</span>
@@ -453,7 +454,7 @@ export function Table({ columns, rows, rowKey, onRowClick, loading, emptyState }
     <div className="overflow-x-auto">
       <table className="w-full min-w-[640px] border-collapse text-sm">
         <thead>
-          <tr className="border-b border-white/8 text-left text-xs uppercase tracking-wide text-slate-500">
+          <tr className="border-b border-slate-900/8 text-left text-xs uppercase tracking-wide text-slate-500">
             {columns.map((col) => (
               <th key={col.key} className={clsx('whitespace-nowrap px-4 py-3 font-medium', col.headClassName)}>
                 {col.header}
@@ -467,8 +468,8 @@ export function Table({ columns, rows, rowKey, onRowClick, loading, emptyState }
               key={rowKey(row)}
               onClick={() => onRowClick?.(row)}
               className={clsx(
-                'border-b border-white/[0.05] transition-colors',
-                onRowClick && 'cursor-pointer hover:bg-white/[0.04]',
+                'border-b border-slate-900/[0.05] transition-colors',
+                onRowClick && 'cursor-pointer hover:bg-slate-900/[0.04]',
               )}
             >
               {columns.map((col) => (
@@ -504,16 +505,16 @@ export function Modal({ open, onClose, title, description, children, footer, siz
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
       <div
         className={clsx(
-          'glass-panel relative z-10 max-h-[85vh] w-full overflow-y-auto rounded-2xl shadow-2xl shadow-black/50',
+          'glass-panel relative z-10 max-h-[85vh] w-full overflow-y-auto rounded-2xl shadow-xl shadow-slate-900/15',
           sizes[size],
         )}
       >
-        <div className="flex items-start justify-between gap-4 border-b border-white/8 px-5 py-4">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-900/8 px-5 py-4">
           <div>
-            <h3 className="text-base font-semibold text-white">{title}</h3>
+            <h3 className="text-base font-semibold text-slate-900">{title}</h3>
             {description && <p className="mt-0.5 text-xs text-slate-400">{description}</p>}
           </div>
           <IconButton onClick={onClose}>
@@ -521,7 +522,7 @@ export function Modal({ open, onClose, title, description, children, footer, siz
           </IconButton>
         </div>
         <div className="px-5 py-4">{children}</div>
-        {footer && <div className="flex justify-end gap-2 border-t border-white/8 px-5 py-4">{footer}</div>}
+        {footer && <div className="flex justify-end gap-2 border-t border-slate-900/8 px-5 py-4">{footer}</div>}
       </div>
     </div>,
     document.body,
@@ -582,9 +583,9 @@ export function Drawer({ open, onClose, title, subtitle, children, footer }) {
   return createPortal(
     <div className="drawer-enter fixed inset-0 z-50">
       <div ref={ref} className="app-shell-bg relative z-10 flex h-full w-full flex-col">
-        <div className="flex items-start justify-between gap-4 border-b border-white/8 bg-ink-950/70 px-5 py-4 backdrop-blur-xl sm:px-8">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-900/8 bg-ink-950/70 px-5 py-4 backdrop-blur-xl sm:px-8">
           <div className="min-w-0">
-            <h3 className="truncate text-lg font-semibold text-white">{title}</h3>
+            <h3 className="truncate text-lg font-semibold text-slate-900">{title}</h3>
             {subtitle && <p className="mt-0.5 truncate text-xs text-slate-400">{subtitle}</p>}
           </div>
           <IconButton onClick={onClose}>
@@ -595,7 +596,7 @@ export function Drawer({ open, onClose, title, subtitle, children, footer }) {
           <div className="mx-auto w-full max-w-5xl px-5 py-6 sm:px-8">{children}</div>
         </div>
         {footer && (
-          <div className="border-t border-white/8 bg-ink-950/70 backdrop-blur-xl">
+          <div className="on-purple border-t border-white/10 bg-[#4c1d95]">
             <div className="mx-auto flex w-full max-w-5xl flex-wrap justify-end gap-2 px-5 py-4 sm:px-8">{footer}</div>
           </div>
         )}
@@ -609,7 +610,7 @@ export function Drawer({ open, onClose, title, subtitle, children, footer }) {
 
 export function Tabs({ tabs, active, onChange }) {
   return (
-    <div className="flex gap-1 overflow-x-auto border-b border-white/8">
+    <div className="flex gap-1 overflow-x-auto border-b border-slate-900/8">
       {tabs.map((tab) => (
         <button
           key={tab.key}
@@ -618,13 +619,13 @@ export function Tabs({ tabs, active, onChange }) {
           className={clsx(
             'focus-ring shrink-0 border-b-2 px-3.5 py-2.5 text-sm font-medium transition',
             active === tab.key
-              ? 'border-brand-500 text-white'
+              ? 'border-brand-500 text-slate-900'
               : 'border-transparent text-slate-400 hover:text-slate-200',
           )}
         >
           {tab.label}
           {tab.count != null && (
-            <span className="ml-1.5 rounded-full bg-white/10 px-1.5 py-0.5 text-[10px] text-slate-300">
+            <span className="ml-1.5 rounded-full bg-slate-900/10 px-1.5 py-0.5 text-[10px] text-slate-300">
               {tab.count}
             </span>
           )}
@@ -648,11 +649,11 @@ export function KeyValue({ label, value, mono }) {
 export function RawPanel({ data, label = 'Raw record' }) {
   if (data == null) return null
   return (
-    <details className="group rounded-xl border border-white/8 bg-black/20">
+    <details className="group rounded-xl border border-slate-900/8 bg-slate-900/[0.03]">
       <summary className="focus-ring cursor-pointer select-none list-none px-3.5 py-2.5 text-xs font-medium text-slate-400 group-open:text-slate-200">
         {label}
       </summary>
-      <pre className="max-h-72 overflow-auto border-t border-white/8 px-3.5 py-3 text-[11px] leading-relaxed text-slate-400">
+      <pre className="max-h-72 overflow-auto border-t border-slate-900/8 px-3.5 py-3 text-[11px] leading-relaxed text-slate-400">
         {JSON.stringify(data, null, 2)}
       </pre>
     </details>
@@ -665,6 +666,167 @@ export function SectionTitle({ children, action }) {
       <h4 className="text-sm font-semibold text-slate-200">{children}</h4>
       {action}
     </div>
+  )
+}
+
+/* ------------------------------ Avatar ------------------------------ */
+
+export function Avatar({ src, name, size = 'md', className }) {
+  const [failed, setFailed] = useState(false)
+  const sizes = { sm: 'h-8 w-8 text-[11px]', md: 'h-10 w-10 text-sm', xl: 'h-24 w-24 text-3xl' }
+  useEffect(() => setFailed(false), [src])
+  return (
+    <div
+      className={clsx(
+        'flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-brand-600 font-semibold text-white',
+        sizes[size],
+        className,
+      )}
+    >
+      {src && !failed ? (
+        <img src={src} alt="" className="h-full w-full object-cover" onError={() => setFailed(true)} />
+      ) : (
+        initials(name)
+      )}
+    </div>
+  )
+}
+
+/* --------------------------- Section heading --------------------------- */
+
+export function SectionHeading({ icon: Icon, children }) {
+  return (
+    <div className="mb-3 flex items-center gap-2 text-brand-600">
+      {Icon && <Icon className="h-4.5 w-4.5" />}
+      <h4 className="text-base font-semibold">{children}</h4>
+    </div>
+  )
+}
+
+/* ------------------------ Search + filter tags bar ------------------------ */
+
+/**
+ * One search box plus a "Filter" popover. Active filters render as removable tags.
+ * fields: [{ key, label, type: 'select' | 'date', options?: [{ value, label }] }]
+ */
+export function FilterBar({ search, onSearch, placeholder, fields, values, onChange, onClear }) {
+  const [open, setOpen] = useState(false)
+  const boxRef = useRef(null)
+
+  useEffect(() => {
+    if (!open) return undefined
+    const onDown = (e) => {
+      if (boxRef.current?.contains(e.target) || e.target.closest?.('[role="listbox"]')) return
+      setOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [open])
+
+  const tagText = (f) => {
+    const v = values[f.key]
+    if (f.type === 'date') return `${f.label}: ${formatDate(v)}`
+    if (f.type === 'entity') return `${f.label}: ${values[f.labelKey] || '…'}`
+    const opt = f.options?.find((o) => o.value === v)
+    return `${f.label}: ${opt ? opt.label : v}`
+  }
+  const active = fields.filter((f) => values[f.key] !== '' && values[f.key] != null)
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        {onSearch && (
+          <div className="w-full sm:max-w-xs">
+            <SearchInput value={search} onChange={(e) => onSearch(e.target.value)} placeholder={placeholder} className="!py-1.5" />
+          </div>
+        )}
+        <div className="relative" ref={boxRef}>
+          <Button variant="secondary" size="sm" onClick={() => setOpen((o) => !o)} className="py-2">
+            <SlidersHorizontal className="h-4 w-4" /> Filter
+            {active.length > 0 && (
+              <span className="rounded-full bg-brand-600 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
+                {active.length}
+              </span>
+            )}
+          </Button>
+          {open && (
+            <div className="select-menu absolute left-0 z-40 mt-2 w-[min(92vw,30rem)] rounded-2xl border border-slate-900/10 bg-white p-4 shadow-xl shadow-slate-900/15 sm:left-auto sm:right-0">
+              <div className="grid grid-cols-2 gap-3">
+              {fields.map((f) => (
+                <div key={f.key} className={f.type === 'date' ? '' : 'col-span-2'}>
+                <Field label={f.label}>
+                  {f.type === 'entity' ? (
+                    <EntitySearchSelect
+                      role={f.role}
+                      placeholder={f.placeholder || 'Search by name…'}
+                      value={values[f.key]}
+                      valueLabel={values[f.labelKey]}
+                      onSelect={(id, label) => {
+                        onChange(f.key, id || '')
+                        onChange(f.labelKey, label || '')
+                      }}
+                    />
+                  ) : f.type === 'date' ? (
+                    <TextInput type="date" value={values[f.key] || ''} onChange={(e) => onChange(f.key, e.target.value)} />
+                  ) : (
+                    <Select value={values[f.key] ?? ''} onChange={(e) => onChange(f.key, e.target.value)}>
+                      <option value="">Any</option>
+                      {f.options.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </Select>
+                  )}
+                </Field>
+                </div>
+              ))}
+              </div>
+              <div className="flex justify-between pt-3">
+                <Button size="sm" variant="ghost" onClick={onClear} disabled={active.length === 0 && !search}>
+                  Clear all
+                </Button>
+                <Button size="sm" onClick={() => setOpen(false)}>
+                  Done
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {(active.length > 0 || (onSearch && search)) && (
+        <div className="flex flex-wrap items-center gap-2">
+          {onSearch && search && (
+            <FilterTag onRemove={() => onSearch('')}>Search: “{search}”</FilterTag>
+          )}
+          {active.map((f) => (
+            <FilterTag key={f.key} onRemove={() => onChange(f.key, '')}>
+              {tagText(f)}
+            </FilterTag>
+          ))}
+          <button type="button" onClick={onClear} className="focus-ring rounded-md px-1.5 text-xs font-medium text-slate-500 hover:text-slate-900">
+            Clear all
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function FilterTag({ children, onRemove }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-brand-500/30 bg-brand-500/10 py-1 pl-3 pr-1.5 text-xs font-medium text-brand-600">
+      {children}
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label="Remove filter"
+        className="focus-ring flex h-4.5 w-4.5 items-center justify-center rounded-full hover:bg-brand-500/20"
+      >
+        <X className="h-3 w-3" />
+      </button>
+    </span>
   )
 }
 
@@ -741,7 +903,7 @@ export function EntitySearchSelect({ role, placeholder = 'Search by name…', va
         </button>
       )}
       {open && query.trim() && (loading || options.length > 0) && (
-        <div className="absolute z-30 mt-1.5 w-full overflow-hidden rounded-xl border border-white/10 bg-[#160e2b] shadow-2xl shadow-black/50">
+        <div className="absolute z-30 mt-1.5 w-full overflow-hidden rounded-xl border border-slate-900/10 bg-white shadow-xl shadow-slate-900/15">
           {loading && <div className="px-3.5 py-2.5 text-xs text-slate-500">Searching…</div>}
           {!loading &&
             options.map((o) => (
@@ -753,12 +915,12 @@ export function EntitySearchSelect({ role, placeholder = 'Search by name…', va
                   setQuery(o.fullName || '')
                   setOpen(false)
                 }}
-                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm text-slate-200 transition hover:bg-white/8"
+                className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left text-sm text-slate-200 transition hover:bg-slate-900/8"
               >
                 {o.profilePicture ? (
                   <img src={o.profilePicture} alt="" className="h-6 w-6 shrink-0 rounded-full object-cover" />
                 ) : (
-                  <div className="h-6 w-6 shrink-0 rounded-full bg-white/10" />
+                  <div className="h-6 w-6 shrink-0 rounded-full bg-slate-900/10" />
                 )}
                 <span className="min-w-0 flex-1 truncate">{o.fullName || 'Unnamed'}</span>
                 {o.email && <span className="shrink-0 truncate text-xs text-slate-500">{o.email}</span>}
@@ -884,7 +1046,7 @@ export function AutoFields({ data, exclude = [], excludeMatch, depth = 0 }) {
     return (
       <div className="space-y-2">
         {data.map((item, i) => (
-          <div key={item?._id || i} className="rounded-xl border border-white/8 bg-white/[0.02] p-3.5">
+          <div key={item?._id || i} className="rounded-xl border border-slate-900/8 bg-slate-900/[0.02] p-3.5">
             <AutoFields data={item} excludeMatch={excludeMatch} depth={depth + 1} />
           </div>
         ))}
@@ -906,7 +1068,7 @@ export function AutoFields({ data, exclude = [], excludeMatch, depth = 0 }) {
   return (
     <div className="space-y-4">
       {primitive.length > 0 && (
-        <div className="divide-y divide-white/5">
+        <div className="divide-y divide-slate-900/5">
           {primitive.map(([k, v]) => (
             <KeyValue key={k} label={humanizeKey(k)} value={<AutoPrimitiveValue keyName={k} value={v} />} />
           ))}
@@ -915,7 +1077,7 @@ export function AutoFields({ data, exclude = [], excludeMatch, depth = 0 }) {
       {objects.map(([k, v]) => (
         <div key={k}>
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">{humanizeKey(k)}</p>
-          <div className="rounded-xl border border-white/8 bg-white/[0.02] p-3.5">
+          <div className="rounded-xl border border-slate-900/8 bg-slate-900/[0.02] p-3.5">
             <AutoFields data={v} excludeMatch={excludeMatch} depth={depth + 1} />
           </div>
         </div>

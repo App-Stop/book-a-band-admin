@@ -8,7 +8,7 @@ import {
   ConfirmDialog,
   Drawer,
   EmptyState,
-  EntitySearchSelect,
+  FilterBar,
   Field,
   KeyValue,
   LoadingBlock,
@@ -67,33 +67,28 @@ export default function PayoutsPage() {
   return (
     <AdminLayout title="Payouts" description="Track and retry band payouts">
       <Card className="mb-4 p-4">
-        <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Select value={filters.status} onChange={(e) => updateFilter('status', e.target.value)}>
-            <option value={NEEDS_ACTION_STATUS}>Needs action (failed / waiting onboarding)</option>
-            <option value="">All payouts</option>
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>
-                {titleCase(s)} only
-              </option>
-            ))}
-          </Select>
-          <EntitySearchSelect
-            role="band"
-            placeholder="Search band name…"
-            value={filters.band}
-            valueLabel={filters.bandLabel}
-            onSelect={(id, label) => {
-              setPage(1)
-              setFilters((f) => ({ ...f, band: id || '', bandLabel: label || '' }))
-            }}
-          />
-          <Field label="Created from">
-            <TextInput type="date" value={filters.from} onChange={(e) => updateFilter('from', e.target.value)} />
-          </Field>
-          <Field label="Created to">
-            <TextInput type="date" value={filters.to} onChange={(e) => updateFilter('to', e.target.value)} />
-          </Field>
-        </div>
+        <FilterBar
+          values={filters}
+          onChange={updateFilter}
+          onClear={() => {
+            setPage(1)
+            setFilters({ status: '', band: '', bandLabel: '', from: '', to: '' })
+          }}
+          fields={[
+            {
+              key: 'status',
+              label: 'Status',
+              type: 'select',
+              options: [
+                { value: NEEDS_ACTION_STATUS, label: 'Needs action (failed / waiting onboarding)' },
+                ...STATUS_OPTIONS.map((v) => ({ value: v, label: `${titleCase(v)} only` })),
+              ],
+            },
+            { key: 'band', label: 'Band', type: 'entity', role: 'band', labelKey: 'bandLabel', placeholder: 'Search band name…' },
+            { key: 'from', label: 'Created from', type: 'date' },
+            { key: 'to', label: 'Created to', type: 'date' },
+          ]}
+        />
       </Card>
 
       <Card>

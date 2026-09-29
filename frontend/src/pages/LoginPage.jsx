@@ -32,16 +32,16 @@ export default function LoginPage() {
     <div className="app-shell-bg flex min-h-screen items-center justify-center px-4 py-10">
       <div className="w-full max-w-md">
         <div className="mb-8 flex flex-col items-center text-center">
-          <div className=" mb-4 flex h-14 w-14 items-center justify-center rounded-2xl shadow-xl shadow-brand-600/30">
+          <div className="brand-gradient mb-4 flex h-14 w-14 items-center justify-center rounded-2xl shadow-md shadow-brand-600/25">
             <img src="/Vector.png" alt="" className="h-7 w-7 object-contain" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">
-            Book<span className="gradient-text">A</span>Band
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            BookABand
           </h1>
           <p className="mt-1 text-sm text-slate-400">Admin console sign in</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="glass-panel space-y-4 rounded-2xl p-6 shadow-2xl shadow-black/40 sm:p-7">
+        <form onSubmit={handleSubmit} className="glass-panel space-y-4 rounded-2xl p-6 shadow-xl shadow-slate-900/10 sm:p-7">
           <Field label="Email address">
             <TextInput
               icon={Mail}

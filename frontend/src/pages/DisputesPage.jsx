@@ -5,13 +5,12 @@ import { AdminLayout } from '../components/layout'
 import {
   Card,
   EmptyState,
-  EntitySearchSelect,
+  FilterBar,
   Field,
   KeyValue,
   Drawer,
   LoadingBlock,
   Pagination,
-  SearchInput,
   SectionTitle,
   Select,
   StatusBadge,
@@ -83,47 +82,24 @@ export default function DisputesPage() {
   return (
     <AdminLayout title="Disputes" description="Triage open disputes between customers and bands">
       <Card className="mb-4 p-4">
-        <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <SearchInput
-            placeholder="Search by booking, customer, band…"
-            value={filters.search}
-            onChange={(e) => updateFilter('search', e.target.value)}
-          />
-          <Select value={filters.status} onChange={(e) => updateFilter('status', e.target.value)}>
-            <option value="">All statuses</option>
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>
-                {titleCase(s)}
-              </option>
-            ))}
-          </Select>
-          <EntitySearchSelect
-            role="band"
-            placeholder="Search band name…"
-            value={filters.band}
-            valueLabel={filters.bandLabel}
-            onSelect={(id, label) => {
-              setPage(1)
-              setFilters((f) => ({ ...f, band: id || '', bandLabel: label || '' }))
-            }}
-          />
-          <EntitySearchSelect
-            role="user"
-            placeholder="Search customer name…"
-            value={filters.customer}
-            valueLabel={filters.customerLabel}
-            onSelect={(id, label) => {
-              setPage(1)
-              setFilters((f) => ({ ...f, customer: id || '', customerLabel: label || '' }))
-            }}
-          />
-          <Field label="Created from">
-            <TextInput type="date" value={filters.from} onChange={(e) => updateFilter('from', e.target.value)} />
-          </Field>
-          <Field label="Created to">
-            <TextInput type="date" value={filters.to} onChange={(e) => updateFilter('to', e.target.value)} />
-          </Field>
-        </div>
+        <FilterBar
+          search={filters.search}
+          onSearch={(v) => updateFilter('search', v)}
+          placeholder="Search customer, band…"
+          values={filters}
+          onChange={updateFilter}
+          onClear={() => {
+            setPage(1)
+            setFilters({ status: '', band: '', bandLabel: '', customer: '', customerLabel: '', from: '', to: '', search: '' })
+          }}
+          fields={[
+            { key: 'status', label: 'Status', type: 'select', options: STATUS_OPTIONS.map((v) => ({ value: v, label: titleCase(v) })) },
+            { key: 'band', label: 'Band', type: 'entity', role: 'band', labelKey: 'bandLabel', placeholder: 'Search band name…' },
+            { key: 'customer', label: 'Customer', type: 'entity', role: 'user', labelKey: 'customerLabel', placeholder: 'Search customer name…' },
+            { key: 'from', label: 'Created from', type: 'date' },
+            { key: 'to', label: 'Created to', type: 'date' },
+          ]}
+        />
       </Card>
 
       <Card>

@@ -50,7 +50,7 @@ export function ToastProvider({ children }) {
           return (
             <div
               key={t.id}
-              className={`glass-panel flex items-start gap-3 rounded-xl border p-3 shadow-2xl shadow-black/40 animate-[toast-in_0.2s_ease-out] ${ACCENTS[t.type]}`}
+              className={`glass-panel flex items-start gap-3 rounded-xl border p-3 shadow-xl shadow-slate-900/10 animate-[toast-in_0.2s_ease-out] ${ACCENTS[t.type]}`}
             >
               <Icon className="mt-0.5 h-5 w-5 shrink-0" />
               <p className="flex-1 text-sm text-slate-100">{t.message}</p>

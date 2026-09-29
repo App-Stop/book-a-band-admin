@@ -125,7 +125,7 @@ export default function DashboardPage() {
                   key={action.label}
                   type="button"
                   onClick={() => navigate(action.to)}
-                  className="focus-ring flex items-center justify-between gap-2 rounded-xl border border-white/8 bg-white/[0.02] px-4 py-3 text-left text-sm text-slate-300 transition hover:border-brand-500/40 hover:bg-white/[0.05] hover:text-white"
+                  className="focus-ring flex items-center justify-between gap-2 rounded-xl border border-slate-900/8 bg-slate-900/[0.02] px-4 py-3 text-left text-sm text-slate-300 transition hover:border-brand-500/40 hover:bg-slate-900/[0.05] hover:text-slate-900"
                 >
                   <span className="flex items-center gap-2.5">
                     <action.icon className="h-4 w-4 text-brand-400" />
@@ -146,7 +146,7 @@ function Metric({ label, value, hint }) {
   return (
     <div>
       <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
-      <p className="mt-0.5 text-lg font-semibold text-white">{value}</p>
+      <p className="mt-0.5 text-lg font-semibold text-slate-900">{value}</p>
       {hint && <p className="text-xs text-slate-500">{hint}</p>}
     </div>
   )

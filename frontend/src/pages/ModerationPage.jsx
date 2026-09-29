@@ -12,6 +12,7 @@ import {
   EmptyState,
   ExternalLink,
   Field,
+  FilterBar,
   KeyValue,
   LoadingBlock,
   Pagination,
@@ -138,23 +139,18 @@ function ReportsTab({ onPendingCount }) {
   return (
     <>
       <Card className="mb-4 p-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Select value={filters.status} onChange={(e) => updateFilter('status', e.target.value)}>
-            {REPORT_STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s === 'all' ? '' : s}>
-                {s === 'all' ? 'All statuses' : titleCase(s)}
-              </option>
-            ))}
-          </Select>
-          <Select value={filters.type} onChange={(e) => updateFilter('type', e.target.value)}>
-            <option value="">All types</option>
-            {REPORT_TYPE_OPTIONS.map((t) => (
-              <option key={t} value={t}>
-                {titleCase(t)}
-              </option>
-            ))}
-          </Select>
-        </div>
+        <FilterBar
+          values={filters}
+          onChange={updateFilter}
+          onClear={() => {
+            setPage(1)
+            setFilters({ status: '', type: '' })
+          }}
+          fields={[
+            { key: 'status', label: 'Status', type: 'select', options: REPORT_STATUS_OPTIONS.filter((v) => v !== 'all').map((v) => ({ value: v, label: titleCase(v) })) },
+            { key: 'type', label: 'Type', type: 'select', options: REPORT_TYPE_OPTIONS.map((v) => ({ value: v, label: titleCase(v) })) },
+          ]}
+        />
       </Card>
 
       <Card>
@@ -353,17 +349,18 @@ function SupportTab() {
   return (
     <>
       <Card className="mb-4 p-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <SearchInput placeholder="Search name, email, message…" value={filters.search} onChange={(e) => updateFilter('search', e.target.value)} />
-          <Select value={filters.status} onChange={(e) => updateFilter('status', e.target.value)}>
-            <option value="">All statuses</option>
-            {SUPPORT_STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>
-                {titleCase(s)}
-              </option>
-            ))}
-          </Select>
-        </div>
+        <FilterBar
+          search={filters.search}
+          onSearch={(v) => updateFilter('search', v)}
+          placeholder="Search name, email, message…"
+          values={filters}
+          onChange={updateFilter}
+          onClear={() => {
+            setPage(1)
+            setFilters({ status: '', search: '' })
+          }}
+          fields={[{ key: 'status', label: 'Status', type: 'select', options: SUPPORT_STATUS_OPTIONS.map((v) => ({ value: v, label: titleCase(v) })) }]}
+        />
       </Card>
 
       <Card>

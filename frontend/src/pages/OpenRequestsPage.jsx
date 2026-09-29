@@ -8,15 +8,15 @@ import {
   ConfirmDialog,
   Drawer,
   EmptyState,
+  FilterBar,
   KeyValue,
   Pagination,
-  Select,
   StatusBadge,
   Table,
 } from '../components/ui'
 import { OpenRequestsAPI } from '../lib/api'
 import { useToast } from '../context/ToastContext'
-import { formatDateTime } from '../lib/formatters'
+import { formatDateTime, titleCase } from '../lib/formatters'
 
 const STATUS_OPTIONS = ['open', 'closed', 'expired', 'cancelled']
 const REQUEST_KNOWN_KEYS = ['_id', 'user', 'status', 'createdAt', 'updatedAt']
@@ -104,16 +104,12 @@ export default function OpenRequestsPage() {
   return (
     <AdminLayout title="Open Requests" description="Manage open booking requests posted by customers">
       <Card className="mb-4 p-4">
-        <div className="grid grid-cols-1 gap-3 sm:max-w-xs">
-          <Select value={status} onChange={(e) => (setPage(1), setStatus(e.target.value))}>
-            <option value="">All statuses</option>
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </Select>
-        </div>
+        <FilterBar
+          values={{ status }}
+          onChange={(_, v) => (setPage(1), setStatus(v))}
+          onClear={() => (setPage(1), setStatus(''))}
+          fields={[{ key: 'status', label: 'Status', type: 'select', options: STATUS_OPTIONS.map((v) => ({ value: v, label: titleCase(v) })) }]}
+        />
       </Card>
 
       <Card>

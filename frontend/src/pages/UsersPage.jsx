@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Users as UsersIcon, ShieldCheck, UserCog, Ban, RotateCcw, Trash2 } from 'lucide-react'
+import { Users as UsersIcon, ShieldCheck, UserCog, Ban, RotateCcw, Trash2, Mail, IdCard, Music2, ImageIcon } from 'lucide-react'
 import { AdminLayout } from '../components/layout'
 import {
   AppLink,
+  Avatar,
   Badge,
   BoolBadge,
   Button,
@@ -12,11 +13,13 @@ import {
   EmptyState,
   ExternalLink,
   Field,
+  FilterBar,
   KeyValue,
   LoadingBlock,
   Modal,
   Pagination,
   SearchInput,
+  SectionHeading,
   Select,
   StatusBadge,
   Table,
@@ -25,12 +28,12 @@ import {
 } from '../components/ui'
 import { BandPackagesAPI, PostsAPI, UsersAPI } from '../lib/api'
 import { useToast } from '../context/ToastContext'
-import { findUrl, formatTimeRange, formatCurrency, formatDate, formatDateTime, formatNumber, initials, refId, titleCase } from '../lib/formatters'
+import { findThumb, findUrl, formatTimeRange, formatCurrency, formatDate, formatDateTime, formatNumber, initials, refId, titleCase } from '../lib/formatters'
 
 const ROLE_OPTIONS = ['user', 'band', 'admin']
 
 export default function UsersPage() {
-  const [filters, setFilters] = useState({ role: '', isDeleted: '', isEmailVerified: '', search: '' })
+  const [filters, setFilters] = useState({ role: '', isDeleted: '', isEmailVerified: '', search: '', joinedFrom: '', joinedTo: '' })
   const [page, setPage] = useState(1)
   const limit = 20
   const [data, setData] = useState(null)
@@ -41,7 +44,8 @@ export default function UsersPage() {
   const fetchList = useCallback(() => {
     setLoading(true)
     setError('')
-    UsersAPI.list({ ...filters, page, limit })
+    const { joinedFrom: _jf, joinedTo: _jt, ...apiFilters } = filters
+    UsersAPI.list({ ...apiFilters, page, limit })
       .then((res) => setData(res.data))
       .catch((err) => setError(err?.message || 'Failed to load users.'))
       .finally(() => setLoading(false))
@@ -56,15 +60,20 @@ export default function UsersPage() {
     setFilters((f) => ({ ...f, [key]: value }))
   }
 
+  const visibleItems = (data?.items || []).filter((u) => {
+    const t = new Date(u.createdAt).getTime()
+    if (filters.joinedFrom && t < new Date(`${filters.joinedFrom}T00:00:00`).getTime()) return false
+    if (filters.joinedTo && t > new Date(`${filters.joinedTo}T23:59:59`).getTime()) return false
+    return true
+  })
+
   const columns = [
     {
       key: 'user',
       header: 'User',
       render: (u) => (
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-accent-500 text-[11px] font-semibold text-white">
-            {initials(u.fullName || u.email)}
-          </div>
+          <Avatar size="sm" src={u.bandProfile?.profilePicture || u.profilePicture} name={u.fullName || u.email} />
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <p className="truncate text-sm font-medium text-slate-100">{u.bandProfile?.fullName || u.fullName || 'Unnamed'}</p>
@@ -104,33 +113,30 @@ export default function UsersPage() {
   return (
     <AdminLayout title="Users & Bands" description="Manage accounts, roles, verification, and access">
       <Card className="mb-4 p-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <SearchInput value={filters.search} onChange={(e) => updateFilter('search', e.target.value)} placeholder="Search name or email…" />
-          <Select value={filters.role} onChange={(e) => updateFilter('role', e.target.value)}>
-            <option value="">All roles</option>
-            {ROLE_OPTIONS.map((r) => (
-              <option key={r} value={r}>
-                {titleCase(r)}
-              </option>
-            ))}
-          </Select>
-          <Select value={filters.isDeleted} onChange={(e) => updateFilter('isDeleted', e.target.value)}>
-            <option value="">All statuses</option>
-            <option value="false">Active</option>
-            <option value="true">Suspended</option>
-          </Select>
-          <Select value={filters.isEmailVerified} onChange={(e) => updateFilter('isEmailVerified', e.target.value)}>
-            <option value="">Email: any</option>
-            <option value="true">Verified</option>
-            <option value="false">Unverified</option>
-          </Select>
-        </div>
+        <FilterBar
+          search={filters.search}
+          onSearch={(v) => updateFilter('search', v)}
+          placeholder="Search by name, email, band name…"
+          values={filters}
+          onChange={updateFilter}
+          onClear={() => {
+            setPage(1)
+            setFilters({ role: '', isDeleted: '', isEmailVerified: '', search: '', joinedFrom: '', joinedTo: '' })
+          }}
+          fields={[
+            { key: 'role', label: 'Role', type: 'select', options: ROLE_OPTIONS.map((r) => ({ value: r, label: titleCase(r) })) },
+            { key: 'isDeleted', label: 'Status', type: 'select', options: [{ value: 'false', label: 'Active' }, { value: 'true', label: 'Suspended' }] },
+            { key: 'isEmailVerified', label: 'Email', type: 'select', options: [{ value: 'true', label: 'Verified' }, { value: 'false', label: 'Unverified' }] },
+            { key: 'joinedFrom', label: 'Joined from', type: 'date' },
+            { key: 'joinedTo', label: 'Joined to', type: 'date' },
+          ]}
+        />
       </Card>
 
       <Card>
         <Table
           columns={columns}
-          rows={data?.items || []}
+          rows={visibleItems}
           rowKey={(u) => u._id}
           loading={loading}
           onRowClick={(u) => setSelectedId(u._id)}
@@ -313,48 +319,65 @@ function UserDetailDrawer({ userId, onClose, onChanged }) {
       {error && !loading && <p className="text-sm text-danger-400">{error}</p>}
 
       {user && (
-        <div className="space-y-5">
-          <div className="flex flex-wrap items-center gap-2">
-            {(Array.isArray(user.role) ? user.role : [user.role]).filter(Boolean).map((r) => (
-              <Badge key={r} tone={r === 'admin' ? 'info' : 'neutral'}>
-                {titleCase(r)}
-              </Badge>
-            ))}
-            <Badge tone={user.isDeleted ? 'danger' : 'success'}>{user.isDeleted ? 'Suspended' : 'Active'}</Badge>
-            <BoolBadge value={user.isEmailVerified} trueLabel="Email verified" falseLabel="Email unverified" />
-          </div>
+        <div className="space-y-8">
+          <Card className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center">
+            <Avatar size="xl" src={detail.band?.profilePicture || user.profilePicture} name={user.fullName || user.email} className="ring-4 ring-brand-500/10" />
+            <div className="min-w-0 flex-1">
+              <h2 className="truncate text-2xl font-semibold text-slate-900">{detail.band?.fullName || user.fullName || 'Unnamed'}</h2>
+              <p className="truncate text-base text-slate-500">{user.email}</p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {(Array.isArray(user.role) ? user.role : [user.role]).filter(Boolean).map((r) => (
+                  <Badge key={r} tone={r === 'admin' ? 'info' : 'neutral'}>
+                    {titleCase(r)}
+                  </Badge>
+                ))}
+                <Badge tone={user.isDeleted ? 'danger' : 'success'}>{user.isDeleted ? 'Suspended' : 'Active'}</Badge>
+                <BoolBadge value={user.isEmailVerified} trueLabel="Email verified" falseLabel="Email unverified" />
+              </div>
+            </div>
+          </Card>
 
           <Tabs tabs={tabs} active={tab} onChange={setTab} />
 
           {tab === 'overview' && (
-            <div className="space-y-4">
-              <Card className="p-4">
-                {/* <KeyValue label="User ID" value={user._id} mono />*/}
-                <KeyValue label="Full name" value={user.fullName} />
-                <KeyValue label="Email" value={user.email} />
-                <KeyValue label="Active role" value={user.activeRole ? titleCase(user.activeRole) : '—'} />
-                <KeyValue label="City" value={user.city} />
-                <KeyValue label="Organizer type" value={user.organizerType ? titleCase(user.organizerType) : '—'} />
-                <KeyValue label="Joined" value={formatDateTime(user.createdAt)} />
-                <KeyValue label="Last updated" value={formatDateTime(user.updatedAt)} />
-              </Card>
+            <div className="space-y-8">
+              <section>
+                <SectionHeading icon={Mail}>Contact Information</SectionHeading>
+                <Card className="divide-y divide-slate-900/8 px-5 py-2">
+                  <KeyValue label="Full name" value={user.fullName} />
+                  <KeyValue label="Email" value={user.email} />
+                  <KeyValue label="City" value={user.city} />
+                </Card>
+              </section>
+
+              <section>
+                <SectionHeading icon={IdCard}>Account</SectionHeading>
+                <Card className="divide-y divide-slate-900/8 px-5 py-2">
+                  <KeyValue label="Active role" value={user.activeRole ? titleCase(user.activeRole) : '—'} />
+                  <KeyValue label="Organizer type" value={user.organizerType ? titleCase(user.organizerType) : '—'} />
+                  <KeyValue label="Joined" value={formatDateTime(user.createdAt)} />
+                  <KeyValue label="Last updated" value={formatDateTime(user.updatedAt)} />
+                </Card>
+              </section>
 
               {detail.band && (
-                <Card className="p-4">
-                  <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">Band profile</p>
-                  <KeyValue label="Band name" value={detail.band.fullName} />
-                  <KeyValue label="Ensemble type" value={detail.band.ensembleType ? titleCase(detail.band.ensembleType) : '—'} />
-                  <KeyValue label="City" value={detail.band.city} />
-                  <KeyValue
-                    label="Price range"
-                    value={
-                      detail.band.minPrice != null || detail.band.maxPrice != null
-                        ? `${formatCurrency(detail.band.minPrice)} – ${formatCurrency(detail.band.maxPrice)}`
-                        : '—'
-                    }
-                  />
-                  <KeyValue label="Packages" value={detail.band.packagesCount} />
-                </Card>
+                <section>
+                  <SectionHeading icon={Music2}>Band Profile</SectionHeading>
+                  <Card className="divide-y divide-slate-900/8 px-5 py-2">
+                    <KeyValue label="Band name" value={detail.band.fullName} />
+                    <KeyValue label="Ensemble type" value={detail.band.ensembleType ? titleCase(detail.band.ensembleType) : '—'} />
+                    <KeyValue label="City" value={detail.band.city} />
+                    <KeyValue
+                      label="Price range"
+                      value={
+                        detail.band.minPrice != null || detail.band.maxPrice != null
+                          ? `${formatCurrency(detail.band.minPrice)} – ${formatCurrency(detail.band.maxPrice)}`
+                          : '—'
+                      }
+                    />
+                    <KeyValue label="Packages" value={detail.band.packagesCount} />
+                  </Card>
+                </section>
               )}
             </div>
           )}
@@ -399,7 +422,7 @@ function UserDetailDrawer({ userId, onClose, onChanged }) {
                   className={`focus-ring rounded-full border px-3.5 py-1.5 text-sm font-medium transition ${
                     roleDraft.role.includes(r)
                       ? 'border-brand-500/60 bg-brand-500/20 text-brand-200'
-                      : 'border-white/10 text-slate-400 hover:text-slate-200'
+                      : 'border-slate-900/10 text-slate-400 hover:text-slate-200'
                   }`}
                 >
                   {titleCase(r)}
@@ -473,7 +496,7 @@ function RecordList({ items, type }) {
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {items.map((item) => {
         const bookingId = type === 'booking' ? item._id : refId(item.booking) || item.bookingId
         return (
@@ -486,7 +509,7 @@ function RecordList({ items, type }) {
                   </p>
                   <StatusBadge status={item.bookingStatus || item.status} />
                 </div>
-                <div className="mt-2 divide-y divide-white/5">
+                <div className="mt-2 divide-y divide-slate-900/5">
                   <Row label="Customer" value={personName(item.user)} />
                   <Row label="Band" value={personName(item.band)} />
                   <Row label="Event date" value={item.eventDate ? formatDate(item.eventDate) : null} />
@@ -505,7 +528,7 @@ function RecordList({ items, type }) {
                   <p className="text-sm font-medium text-slate-100">{formatCurrency(item.totalAmount)}</p>
                   <StatusBadge status={item.status} />
                 </div>
-                <div className="mt-2 divide-y divide-white/5">
+                <div className="mt-2 divide-y divide-slate-900/5">
                   <Row label="Refunded" value={item.refundedAmount > 0 ? formatCurrency(item.refundedAmount) : null} />
                   <Row label="Platform fee" value={item.platformFee != null ? formatCurrency(item.platformFee) : null} />
                   <Row label="Method" value={item.paymentMethod ? titleCase(item.paymentMethod) : null} />
@@ -520,7 +543,7 @@ function RecordList({ items, type }) {
                   <p className="text-sm font-medium text-slate-100">{formatCurrency(item.payoutAmount)}</p>
                   <StatusBadge status={item.status} />
                 </div>
-                <div className="mt-2 divide-y divide-white/5">
+                <div className="mt-2 divide-y divide-slate-900/5">
                   <Row label="Band" value={personName(item.band)} />
                   <Row label="Transferred" value={item.transferredAt ? formatDateTime(item.transferredAt) : null} />
                   <Row label="Created" value={formatDateTime(item.createdAt)} />
@@ -543,7 +566,7 @@ function RecordList({ items, type }) {
                   <p className="text-sm font-medium text-slate-100">{item.reason || 'Dispute'}</p>
                   <StatusBadge status={item.status} />
                 </div>
-                <div className="mt-2 divide-y divide-white/5">
+                <div className="mt-2 divide-y divide-slate-900/5">
                   <Row label="Opened" value={formatDateTime(item.openedAt || item.createdAt)} />
                   <Row label="Resolution" value={item.resolution} />
                 </div>
@@ -555,7 +578,7 @@ function RecordList({ items, type }) {
                   <p className="text-sm font-medium text-slate-100">{item.city || 'Availability request'}</p>
                   <StatusBadge status={item.status} />
                 </div>
-                <div className="mt-2 divide-y divide-white/5">
+                <div className="mt-2 divide-y divide-slate-900/5">
                   <Row label="Event date" value={item.eventDate ? formatDate(item.eventDate) : null} />
                   <Row label="Event time" value={timeWindow(item)} />
                   <Row label="Address" value={item.address} />
@@ -618,7 +641,7 @@ function PackagesTab({ items, onChanged }) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-4">
       {items.map((p) => (
         <Card key={p._id} className="flex items-start justify-between gap-2 p-4">
           <div className="min-w-0">
@@ -666,6 +689,20 @@ function PackagesTab({ items, onChanged }) {
   )
 }
 
+function PostThumb({ post }) {
+  const [failed, setFailed] = useState(false)
+  const src = findThumb(post)
+  return (
+    <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-900/10 bg-slate-900/[0.04] text-slate-400">
+      {src && !failed ? (
+        <img src={src} alt="" className="h-full w-full object-cover" onError={() => setFailed(true)} />
+      ) : (
+        <ImageIcon className="h-6 w-6" />
+      )}
+    </div>
+  )
+}
+
 function PostsTab({ items, onChanged }) {
   const toast = useToast()
   const [deleteTarget, setDeleteTarget] = useState(null)
@@ -691,12 +728,13 @@ function PostsTab({ items, onChanged }) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-4">
       {items.map((p) => (
-        <Card key={p._id} className="p-3.5">
-          <div className="flex items-start justify-between gap-2">
+        <Card key={p._id} className="p-4">
+          <div className="flex items-start gap-4">
+            <PostThumb post={p} />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm text-slate-200">{p.caption || 'Untitled post'}</p>
+              <p className="truncate text-sm font-medium text-slate-100">{p.caption || 'Untitled post'}</p>
               <p className="text-xs text-slate-500">
                 {formatNumber(p.likeCount)} likes · {formatNumber(p.commentCount)} comments · {formatNumber(p.views)} views ·{' '}
                 {formatDate(p.createdAt)}

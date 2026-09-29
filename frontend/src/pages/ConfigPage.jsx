@@ -82,7 +82,7 @@ export default function ConfigPage() {
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {(Array.isArray(values) ? values : []).map((v) => (
-                      <span key={v} className="rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-0.5 text-xs text-slate-300">
+                      <span key={v} className="rounded-full border border-slate-900/10 bg-slate-900/[0.03] px-2.5 py-0.5 text-xs text-slate-300">
                         {v}
                       </span>
                     ))}
@@ -124,7 +124,7 @@ function PolicyGrid({ policy: rawPolicy }) {
       {simple.length > 0 && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {simple.map(([key, value]) => (
-            <div key={key} className="rounded-xl border border-white/8 bg-white/[0.02] p-3.5">
+            <div key={key} className="rounded-xl border border-slate-900/8 bg-slate-900/[0.02] p-3.5">
               <p className="text-xs uppercase tracking-wide text-slate-500">{titleCase(key)}</p>
               <p className="mt-0.5 text-sm font-medium text-slate-100">{String(value)}</p>
             </div>
@@ -132,7 +132,7 @@ function PolicyGrid({ policy: rawPolicy }) {
         </div>
       )}
       {nested.map(([key, value]) => (
-        <div key={key} className="rounded-xl border border-white/8 bg-white/[0.02] p-4">
+        <div key={key} className="rounded-xl border border-slate-900/8 bg-slate-900/[0.02] p-4">
           <SectionTitle>{titleCase(key)}</SectionTitle>
           <AutoFields data={value} />
         </div>

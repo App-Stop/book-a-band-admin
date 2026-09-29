@@ -8,12 +8,11 @@ import {
   ConfirmDialog,
   Drawer,
   EmptyState,
-  EntitySearchSelect,
+  FilterBar,
   Field,
   KeyValue,
   LoadingBlock,
   Pagination,
-  SearchInput,
   SectionTitle,
   Select,
   StatusBadge,
@@ -103,56 +102,27 @@ export default function BookingsPage() {
 
   return (
     <AdminLayout title="Bookings" description="Monitor and intervene on customer bookings">
-      <Card className="mb-4 space-y-3 p-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <SearchInput
-            placeholder="Search booking id, customer, band…"
-            value={filters.search}
-            onChange={(e) => updateFilter('search', e.target.value)}
-          />
-          <Select value={filters.status} onChange={(e) => updateFilter('status', e.target.value)}>
-            <option value="">All statuses</option>
-            {STATUS_OPTIONS.map((s) => (
-              <option key={s} value={s}>
-                {titleCase(s)}
-              </option>
-            ))}
-          </Select>
-          <EntitySearchSelect
-            role="band"
-            placeholder="Search band name…"
-            value={filters.band}
-            valueLabel={filters.bandLabel}
-            onSelect={(id, label) => {
-              setPage(1)
-              setFilters((f) => ({ ...f, band: id || '', bandLabel: label || '' }))
-            }}
-          />
-          <EntitySearchSelect
-            role="user"
-            placeholder="Search customer name…"
-            value={filters.user}
-            valueLabel={filters.userLabel}
-            onSelect={(id, label) => {
-              setPage(1)
-              setFilters((f) => ({ ...f, user: id || '', userLabel: label || '' }))
-            }}
-          />
-        </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Field label="Created from">
-            <TextInput type="date" value={filters.from} onChange={(e) => updateFilter('from', e.target.value)} />
-          </Field>
-          <Field label="Created to">
-            <TextInput type="date" value={filters.to} onChange={(e) => updateFilter('to', e.target.value)} />
-          </Field>
-          <Field label="Event from">
-            <TextInput type="date" value={filters.eventFrom} onChange={(e) => updateFilter('eventFrom', e.target.value)} />
-          </Field>
-          <Field label="Event to">
-            <TextInput type="date" value={filters.eventTo} onChange={(e) => updateFilter('eventTo', e.target.value)} />
-          </Field>
-        </div>
+      <Card className="mb-4 p-4">
+        <FilterBar
+          search={filters.search}
+          onSearch={(v) => updateFilter('search', v)}
+          placeholder="Search customer, band…"
+          values={filters}
+          onChange={updateFilter}
+          onClear={() => {
+            setPage(1)
+            setFilters({ status: '', band: '', bandLabel: '', user: '', userLabel: '', from: '', to: '', eventFrom: '', eventTo: '', search: '' })
+          }}
+          fields={[
+            { key: 'status', label: 'Status', type: 'select', options: STATUS_OPTIONS.map((v) => ({ value: v, label: titleCase(v) })) },
+            { key: 'band', label: 'Band', type: 'entity', role: 'band', labelKey: 'bandLabel', placeholder: 'Search band name…' },
+            { key: 'user', label: 'Customer', type: 'entity', role: 'user', labelKey: 'userLabel', placeholder: 'Search customer name…' },
+            { key: 'from', label: 'Created from', type: 'date' },
+            { key: 'to', label: 'Created to', type: 'date' },
+            { key: 'eventFrom', label: 'Event from', type: 'date' },
+            { key: 'eventTo', label: 'Event to', type: 'date' },
+          ]}
+        />
       </Card>
 
       <Card>
@@ -324,7 +294,7 @@ function BookingDetailDrawer({ bookingId, onClose, onChanged }) {
               <SectionTitle>Activity log</SectionTitle>
               <div className="space-y-2">
                 {detail.activityLog.map((entry, i) => (
-                  <div key={entry._id || i} className="flex items-start justify-between gap-3 border-b border-white/5 py-2 text-sm last:border-0">
+                  <div key={entry._id || i} className="flex items-start justify-between gap-3 border-b border-slate-900/5 py-2 text-sm last:border-0">
                     <span className="text-slate-300">{humanizeText(entry.action || entry.type || 'Activity')}</span>
                     <span className="shrink-0 text-xs text-slate-500">{formatDateTime(entry.createdAt)}</span>
                   </div>

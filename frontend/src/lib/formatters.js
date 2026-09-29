@@ -104,6 +104,27 @@ export function findUrl(obj, depth = 0) {
   return null
 }
 
+const VIDEO_EXT = /\.(mp4|mov|m4v|webm|avi|mkv|m3u8)(\?.*)?$/i
+
+/** Best-effort: find an image URL suitable for a thumbnail. */
+export function findThumb(obj, depth = 0) {
+  if (!obj || depth > 3) return null
+  if (typeof obj === 'string') return isUrl(obj) && !VIDEO_EXT.test(obj) ? obj : null
+  if (Array.isArray(obj)) {
+    for (const item of obj) {
+      const u = findThumb(item, depth + 1)
+      if (u) return u
+    }
+    return null
+  }
+  if (typeof obj !== 'object') return null
+  for (const k of ['thumbnail', 'thumbnailUrl', 'thumbUrl', 'thumb', 'coverImage', 'imageUrl', 'image', 'images', 'photos', 'media', 'mediaUrl', 'medias', 'url']) {
+    const u = findThumb(obj[k], depth + 1)
+    if (u) return u
+  }
+  return null
+}
+
 /** Reads an id from a populated object or a raw id string. */
 export function refId(v) {
   if (!v) return null
