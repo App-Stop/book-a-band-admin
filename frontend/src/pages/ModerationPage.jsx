@@ -14,6 +14,8 @@ import {
   Field,
   FilterBar,
   KeyValue,
+  PersonCell,
+  ProfileCard,
   LoadingBlock,
   Pagination,
   SearchInput,
@@ -36,6 +38,11 @@ const SUPPORT_STATUS_OPTIONS = ['new', 'pending', 'in_progress', 'resolved', 'cl
 const REPORT_KNOWN_KEYS = ['_id', '__v', 'type', 'status', 'targetId', 'reportedBy', 'resolvedBy', 'createdAt', 'updatedAt', 'resolvedAt']
 const LOCATION_KEY = /location|address|coordinates|latitude|longitude|geo|lat$|lng$|lon$/i
 const TARGET_KNOWN_KEYS = ['_id', '__v', 'post', 'postId', 'caption', 'comment', 'text', 'content', 'rating', 'band', 'user', 'createdAt', 'updatedAt']
+
+function authorOf(target) {
+  const a = target?.band || target?.user
+  return a && typeof a === 'object' ? a : null
+}
 
 function getContentPreview(report) {
   const t = report.targetId
@@ -119,12 +126,7 @@ function ReportsTab({ onPendingCount }) {
       header: 'Reported by',
       headClassName: 'hidden md:table-cell',
       className: 'hidden md:table-cell',
-      render: (r) => (
-        <div>
-          <p className="text-sm font-medium text-slate-100">{r.reportedBy?.fullName || '—'}</p>
-          <p className="text-xs text-slate-500">{r.reportedBy?.email}</p>
-        </div>
-      ),
+      render: (r) => <PersonCell person={r.reportedBy} />,
     },
     { key: 'status', header: 'Status', className: 'whitespace-nowrap', render: (r) => <StatusBadge status={r.status} /> },
     {
@@ -249,12 +251,14 @@ function ReportDetailDrawer({ report, onClose, onResolved }) {
           )}
         </Card>
 
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <ProfileCard label="Reported by" person={report.reportedBy} />
+          {authorOf(target) && <ProfileCard label="Content author" person={authorOf(target)} role={target.band ? 'band' : 'user'} />}
+          {report.resolvedBy && <ProfileCard label="Resolved by" person={report.resolvedBy} />}
+        </div>
+
         <Card className="p-4">
-          {/* <KeyValue label="Report ID" value={report._id} mono />*/}
-          {/* <KeyValue label="Reported by" value={report.reportedBy?.fullName} />*/}
-          <KeyValue label="Reporter email" value={report.reportedBy?.email} />
           <KeyValue label="Reported" value={formatDateTime(report.createdAt)} />
-          {report.resolvedBy && <KeyValue label="Resolved by" value={report.resolvedBy?.fullName} />}
           {report.resolvedAt && <KeyValue label="Resolved" value={formatDateTime(report.resolvedAt)} />}
         </Card>
 
@@ -334,12 +338,7 @@ function SupportTab() {
     {
       key: 'from',
       header: 'From',
-      render: (m) => (
-        <div>
-          <p className="text-sm font-medium text-slate-100">{m.name || '—'}</p>
-          <p className="text-xs text-slate-500">{m.email}</p>
-        </div>
-      ),
+      render: (m) => <PersonCell person={{ fullName: m.name, email: m.email }} />,
     },
     { key: 'message', header: 'Message', className: 'max-w-sm truncate', render: (m) => m.message },
     { key: 'status', header: 'Status', render: (m) => <StatusBadge status={m.status} /> },
@@ -455,9 +454,9 @@ function SupportMessageDrawer({ id, onClose, onChanged }) {
         <div className="space-y-5">
           <StatusBadge status={message.status} />
 
+          <ProfileCard label="From" person={{ fullName: message.name, email: message.email }} />
+
           <Card className="p-4">
-            <KeyValue label="Name" value={message.name} />
-            <KeyValue label="Email" value={message.email} />
             <KeyValue label="Received" value={formatDateTime(message.createdAt)} />
           </Card>
 
