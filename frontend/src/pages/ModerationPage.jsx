@@ -72,7 +72,7 @@ export default function ModerationPage() {
 /* -------------------------------- Reports -------------------------------- */
 
 function ReportsTab({ onPendingCount }) {
-  const [filters, setFilters] = useState({ status: 'pending', type: '' })
+  const [filters, setFilters] = useState({ status: '', type: '' })
   const [page, setPage] = useState(1)
   const limit = 20
   const [data, setData] = useState(null)
@@ -84,7 +84,7 @@ function ReportsTab({ onPendingCount }) {
   const fetchList = useCallback(() => {
     setLoading(true)
     setError('')
-    ReportsAPI.list({ ...filters, page, limit })
+    ReportsAPI.list({ ...filters, status: filters.status || 'all', page, limit })
       .then((res) => {
         const items = res.data?.items || res.data?.reports || []
         setData({ items, pagination: res.data?.pagination })

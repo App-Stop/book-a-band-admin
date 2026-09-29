@@ -593,13 +593,11 @@ export function Drawer({ open, onClose, title, subtitle, children, footer }) {
           </IconButton>
         </div>
         <div className="flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-5xl px-5 py-6 sm:px-8">{children}</div>
-        </div>
-        {footer && (
-          <div className="on-purple border-t border-white/10 bg-[#4c1d95]">
-            <div className="mx-auto flex w-full max-w-5xl flex-wrap justify-end gap-2 px-5 py-4 sm:px-8">{footer}</div>
+          <div className="mx-auto w-full max-w-5xl px-5 py-6 sm:px-8">
+            {children}
+            {footer && <div className="mt-8 flex flex-wrap justify-end gap-2">{footer}</div>}
           </div>
-        )}
+        </div>
       </div>
     </div>,
     document.body,

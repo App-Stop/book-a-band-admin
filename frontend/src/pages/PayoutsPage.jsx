@@ -27,7 +27,7 @@ const STATUS_OPTIONS = ['pending', 'processing', 'paid', 'failed', 'waiting_onbo
 const NEEDS_ACTION_STATUS = 'failed,waiting_onboarding'
 
 export default function PayoutsPage() {
-  const [filters, setFilters] = useState({ status: NEEDS_ACTION_STATUS, band: '', bandLabel: '', from: '', to: '' })
+  const [filters, setFilters] = useState({ status: '', band: '', bandLabel: '', from: '', to: '' })
   const [page, setPage] = useState(1)
   const limit = 20
   const [data, setData] = useState(null)
