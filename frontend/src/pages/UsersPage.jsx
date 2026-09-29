@@ -693,11 +693,11 @@ function PostThumb({ post }) {
   const [failed, setFailed] = useState(false)
   const src = findThumb(post)
   return (
-    <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-slate-900/10 bg-slate-900/[0.04] text-slate-400">
+    <div className="flex h-full w-full items-center justify-center overflow-hidden bg-slate-900/[0.05] text-slate-400">
       {src && !failed ? (
         <img src={src} alt="" className="h-full w-full object-cover" onError={() => setFailed(true)} />
       ) : (
-        <ImageIcon className="h-6 w-6" />
+        <ImageIcon className="h-10 w-10" />
       )}
     </div>
   )
@@ -728,31 +728,33 @@ function PostsTab({ items, onChanged }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="grid grid-cols-1 gap-5 min-[480px]:grid-cols-2 lg:grid-cols-3">
       {items.map((p) => (
-        <Card key={p._id} className="p-4">
-          <div className="flex items-start gap-4">
+        <Card key={p._id} className="flex aspect-square flex-col overflow-hidden">
+          <div className="relative min-h-0 flex-[7]">
             <PostThumb post={p} />
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-slate-100">{p.caption || 'Untitled post'}</p>
-              <p className="text-xs text-slate-500">
-                {formatNumber(p.likeCount)} likes · {formatNumber(p.commentCount)} comments · {formatNumber(p.views)} views ·{' '}
-                {formatDate(p.createdAt)}
-              </p>
-              {findUrl(p) ? (
-                <p className="mt-1.5 text-xs">
-                  <ExternalLink href={findUrl(p)}>Click here to view post</ExternalLink>
-                </p>
-              ) : null}
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <Badge tone={p.isDeleted ? 'danger' : 'success'}>{p.isDeleted ? 'Removed' : 'Live'}</Badge>
+            <div className="absolute inset-x-2.5 top-2.5 flex items-start justify-between gap-2">
+              <Badge tone={p.isDeleted ? 'danger' : 'success'} className="bg-white/90 shadow-sm backdrop-blur">
+                {p.isDeleted ? 'Removed' : 'Live'}
+              </Badge>
               {!p.isDeleted && (
-                <Button size="sm" variant="danger" onClick={() => setDeleteTarget(p)}>
+                <Button size="sm" variant="danger" className="bg-white/90 backdrop-blur" onClick={() => setDeleteTarget(p)}>
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               )}
             </div>
+          </div>
+          <div className="flex min-h-0 flex-[3] flex-col justify-center gap-0.5 px-3.5 py-2.5">
+            <p className="line-clamp-1 text-sm font-medium text-slate-100">{p.caption || 'Untitled post'}</p>
+            <p className="line-clamp-2 text-xs text-slate-500">
+              {formatNumber(p.likeCount)} likes · {formatNumber(p.commentCount)} comments · {formatNumber(p.views)} views ·{' '}
+              {formatDate(p.createdAt)}
+            </p>
+            {findUrl(p) ? (
+              <p className="text-xs">
+                <ExternalLink href={findUrl(p)}>Click here to view post</ExternalLink>
+              </p>
+            ) : null}
           </div>
         </Card>
       ))}
