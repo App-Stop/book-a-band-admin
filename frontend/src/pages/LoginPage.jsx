@@ -38,7 +38,7 @@ export default function LoginPage() {
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">
             BookABand
           </h1>
-          <p className="mt-1 text-sm text-slate-400">Admin console sign in</p>
+          <p className="mt-1 text-sm">Admin console sign in</p>
         </div>
 
         <form onSubmit={handleSubmit} className="glass-panel space-y-4 rounded-2xl p-6 shadow-xl shadow-slate-900/10 sm:p-7">
