@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useListParams, useOpenParam } from '../lib/hooks'
 import { Flag, LifeBuoy, Save, ShieldCheck, Trash2 } from 'lucide-react'
 import { AdminLayout } from '../components/layout'
 import {
@@ -33,6 +33,8 @@ const REPORT_STATUS_OPTIONS = ['pending', 'resolved', 'dismissed', 'all']
 const REPORT_TYPE_OPTIONS = ['review', 'post', 'comment']
 const TYPE_TONE = { review: 'warning', post: 'info', comment: 'neutral' }
 
+const REPORT_DEFAULTS = { status: '', type: '' }
+const SUPPORT_DEFAULTS = { status: '', search: '' }
 const SUPPORT_STATUS_OPTIONS = ['new', 'pending', 'in_progress', 'resolved', 'closed']
 
 const REPORT_KNOWN_KEYS = ['_id', '__v', 'type', 'status', 'targetId', 'reportedBy', 'resolvedBy', 'createdAt', 'updatedAt', 'resolvedAt']
@@ -79,14 +81,12 @@ export default function ModerationPage() {
 /* -------------------------------- Reports -------------------------------- */
 
 function ReportsTab({ onPendingCount }) {
-  const [filters, setFilters] = useState({ status: '', type: '' })
-  const [page, setPage] = useState(1)
+  const { filters, page, setPage, updateFilter, clearFilters } = useListParams(REPORT_DEFAULTS, 'r_')
   const limit = 20
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [searchParams] = useSearchParams()
-  const [selectedId, setSelectedId] = useState(searchParams.get('open'))
+  const [selectedId, openDetail, closeDetail] = useOpenParam()
 
   const fetchList = useCallback(() => {
     setLoading(true)
@@ -104,11 +104,6 @@ function ReportsTab({ onPendingCount }) {
   useEffect(() => {
     fetchList()
   }, [fetchList])
-
-  function updateFilter(key, value) {
-    setPage(1)
-    setFilters((f) => ({ ...f, [key]: value }))
-  }
 
   const items = data?.items || []
   const selectedReport = items.find((r) => r._id === selectedId)
@@ -144,10 +139,7 @@ function ReportsTab({ onPendingCount }) {
         <FilterBar
           values={filters}
           onChange={updateFilter}
-          onClear={() => {
-            setPage(1)
-            setFilters({ status: '', type: '' })
-          }}
+          onClear={clearFilters}
           fields={[
             { key: 'status', label: 'Status', type: 'select', options: REPORT_STATUS_OPTIONS.filter((v) => v !== 'all').map((v) => ({ value: v, label: titleCase(v) })) },
             { key: 'type', label: 'Type', type: 'select', options: REPORT_TYPE_OPTIONS.map((v) => ({ value: v, label: titleCase(v) })) },
@@ -161,7 +153,7 @@ function ReportsTab({ onPendingCount }) {
           rows={items}
           rowKey={(r) => r._id}
           loading={loading}
-          onRowClick={(r) => setSelectedId(r._id)}
+          onRowClick={(r) => openDetail(r._id)}
           emptyState={<EmptyState icon={Flag} title="No reports found" description="Try adjusting your filters." />}
         />
         {data?.pagination && (
@@ -178,7 +170,7 @@ function ReportsTab({ onPendingCount }) {
       {error && !data && <p className="mt-4 text-sm text-danger-400">{error}</p>}
 
       {selectedReport && (
-        <ReportDetailDrawer report={selectedReport} onClose={() => setSelectedId(null)} onResolved={fetchList} />
+        <ReportDetailDrawer report={selectedReport} onClose={() => closeDetail()} onResolved={fetchList} />
       )}
     </>
   )
@@ -308,13 +300,12 @@ function ReportDetailDrawer({ report, onClose, onResolved }) {
 /* -------------------------------- Support -------------------------------- */
 
 function SupportTab() {
-  const [filters, setFilters] = useState({ status: '', search: '' })
-  const [page, setPage] = useState(1)
+  const { filters, page, setPage, updateFilter, clearFilters } = useListParams(SUPPORT_DEFAULTS, 's_')
   const limit = 20
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [selectedId, setSelectedId] = useState(null)
+  const [selectedId, openDetail, closeDetail] = useOpenParam()
 
   const fetchList = useCallback(() => {
     setLoading(true)
@@ -328,11 +319,6 @@ function SupportTab() {
   useEffect(() => {
     fetchList()
   }, [fetchList])
-
-  function updateFilter(key, value) {
-    setPage(1)
-    setFilters((f) => ({ ...f, [key]: value }))
-  }
 
   const columns = [
     {
@@ -354,10 +340,7 @@ function SupportTab() {
           placeholder="Search name, email, message…"
           values={filters}
           onChange={updateFilter}
-          onClear={() => {
-            setPage(1)
-            setFilters({ status: '', search: '' })
-          }}
+          onClear={clearFilters}
           fields={[{ key: 'status', label: 'Status', type: 'select', options: SUPPORT_STATUS_OPTIONS.map((v) => ({ value: v, label: titleCase(v) })) }]}
         />
       </Card>
@@ -368,7 +351,7 @@ function SupportTab() {
           rows={data?.items || []}
           rowKey={(m) => m._id}
           loading={loading}
-          onRowClick={(m) => setSelectedId(m._id)}
+          onRowClick={(m) => openDetail(m._id)}
           emptyState={<EmptyState icon={LifeBuoy} title="No support messages" description="Try adjusting your filters." />}
         />
         {data?.pagination && (
@@ -384,7 +367,7 @@ function SupportTab() {
 
       {error && !data && <p className="mt-4 text-sm text-danger-400">{error}</p>}
 
-      {selectedId && <SupportMessageDrawer id={selectedId} onClose={() => setSelectedId(null)} onChanged={fetchList} />}
+      {selectedId && <SupportMessageDrawer id={selectedId} onClose={() => closeDetail()} onChanged={fetchList} />}
     </>
   )
 }

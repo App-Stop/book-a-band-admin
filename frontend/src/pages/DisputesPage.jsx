@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useListParams, useOpenParam } from '../lib/hooks'
 import { ShieldAlert } from 'lucide-react'
 import { AdminLayout } from '../components/layout'
 import {
@@ -24,25 +24,15 @@ import { formatCurrency, formatDate, formatDateTime, titleCase } from '../lib/fo
 
 const STATUS_OPTIONS = ['open', 'under_review', 'resolved_for_customer', 'resolved_for_band', 'rejected', 'closed']
 
+const DEFAULT_FILTERS = { status: '', band: '', bandLabel: '', customer: '', customerLabel: '', booking: '', search: '', from: '', to: '' }
+
 export default function DisputesPage() {
-  const [filters, setFilters] = useState({
-    status: '',
-    band: '',
-    bandLabel: '',
-    customer: '',
-    customerLabel: '',
-    booking: '',
-    search: '',
-    from: '',
-    to: '',
-  })
-  const [page, setPage] = useState(1)
+  const { filters, page, setPage, updateFilter, clearFilters } = useListParams(DEFAULT_FILTERS)
   const limit = 20
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [searchParams] = useSearchParams()
-  const [selectedId, setSelectedId] = useState(searchParams.get('open'))
+  const [selectedId, openDetail, closeDetail] = useOpenParam()
 
   const fetchList = useCallback(() => {
     setLoading(true)
@@ -57,11 +47,6 @@ export default function DisputesPage() {
   useEffect(() => {
     fetchList()
   }, [fetchList])
-
-  function updateFilter(key, value) {
-    setPage(1)
-    setFilters((f) => ({ ...f, [key]: value }))
-  }
 
   const columns = [
     {
@@ -85,10 +70,7 @@ export default function DisputesPage() {
           placeholder="Search customer, band…"
           values={filters}
           onChange={updateFilter}
-          onClear={() => {
-            setPage(1)
-            setFilters({ status: '', band: '', bandLabel: '', customer: '', customerLabel: '', from: '', to: '', search: '' })
-          }}
+          onClear={clearFilters}
           fields={[
             { key: 'status', label: 'Status', type: 'select', options: STATUS_OPTIONS.map((v) => ({ value: v, label: titleCase(v) })) },
             { key: 'band', label: 'Band', type: 'entity', role: 'band', labelKey: 'bandLabel', placeholder: 'Search band name…' },
@@ -105,7 +87,7 @@ export default function DisputesPage() {
           rows={data?.items || []}
           rowKey={(d) => d._id}
           loading={loading}
-          onRowClick={(d) => setSelectedId(d._id)}
+          onRowClick={(d) => openDetail(d._id)}
           emptyState={<EmptyState icon={ShieldAlert} title="No disputes found" description="Try adjusting your filters." />}
         />
         {data?.pagination && (
@@ -121,7 +103,7 @@ export default function DisputesPage() {
 
       {error && !data && <p className="mt-4 text-sm text-danger-400">{error}</p>}
 
-      {selectedId && <DisputeDetailDrawer disputeId={selectedId} onClose={() => setSelectedId(null)} />}
+      {selectedId && <DisputeDetailDrawer disputeId={selectedId} onClose={() => closeDetail()} />}
     </AdminLayout>
   )
 }

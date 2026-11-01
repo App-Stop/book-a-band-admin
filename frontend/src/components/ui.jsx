@@ -1045,7 +1045,8 @@ function isDateKey(key) {
 }
 
 function isMoneyKey(key) {
-  return /(amount|price|fee|cost|total|payout|earning|revenue|balance)/i.test(key)
+  if (/(count|number|qty|quantity|rating|views|likes|comments|percent|rate)/i.test(key)) return false
+  return /(amount|price|fee|cost|total|payout|earning|revenue|balance|budget)/i.test(key)
 }
 
 function isIdKey(key) {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useListParams, useOpenParam } from '../lib/hooks'
 import { Wallet, RefreshCw } from 'lucide-react'
 import { AdminLayout } from '../components/layout'
 import {
@@ -28,15 +28,15 @@ import { formatCurrency, formatDate, formatDateTime, formatTimeRange, titleCase 
 const STATUS_OPTIONS = ['pending', 'processing', 'paid', 'failed', 'waiting_onboarding', 'cancelled']
 const NEEDS_ACTION_STATUS = 'failed,waiting_onboarding'
 
+const DEFAULT_FILTERS = { status: '', band: '', bandLabel: '', from: '', to: '' }
+
 export default function PayoutsPage() {
-  const [filters, setFilters] = useState({ status: '', band: '', bandLabel: '', from: '', to: '' })
-  const [page, setPage] = useState(1)
+  const { filters, page, setPage, updateFilter, clearFilters } = useListParams(DEFAULT_FILTERS)
   const limit = 20
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [searchParams] = useSearchParams()
-  const [selectedId, setSelectedId] = useState(searchParams.get('open'))
+  const [selectedId, openDetail, closeDetail] = useOpenParam()
 
   const fetchList = useCallback(() => {
     setLoading(true)
@@ -51,11 +51,6 @@ export default function PayoutsPage() {
   useEffect(() => {
     fetchList()
   }, [fetchList])
-
-  function updateFilter(key, value) {
-    setPage(1)
-    setFilters((f) => ({ ...f, [key]: value }))
-  }
 
   const columns = [
     { key: 'band', header: 'Band', render: (p) => <PersonCell person={p.band} role="band" /> },
@@ -72,10 +67,7 @@ export default function PayoutsPage() {
         <FilterBar
           values={filters}
           onChange={updateFilter}
-          onClear={() => {
-            setPage(1)
-            setFilters({ status: '', band: '', bandLabel: '', from: '', to: '' })
-          }}
+          onClear={clearFilters}
           fields={[
             {
               key: 'status',
@@ -99,7 +91,7 @@ export default function PayoutsPage() {
           rows={data?.items || []}
           rowKey={(p) => p._id}
           loading={loading}
-          onRowClick={(p) => setSelectedId(p._id)}
+          onRowClick={(p) => openDetail(p._id)}
           emptyState={<EmptyState icon={Wallet} title="No payouts found" description="Try adjusting your filters." />}
         />
         {data?.pagination && (
@@ -115,7 +107,7 @@ export default function PayoutsPage() {
 
       {error && !data && <p className="mt-4 text-sm text-danger-400">{error}</p>}
 
-      {selectedId && <PayoutDetailDrawer payoutId={selectedId} onClose={() => setSelectedId(null)} onChanged={fetchList} />}
+      {selectedId && <PayoutDetailDrawer payoutId={selectedId} onClose={() => closeDetail()} onChanged={fetchList} />}
     </AdminLayout>
   )
 }

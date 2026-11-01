@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useListParams, useOpenParam } from '../lib/hooks'
 import { CalendarClock, XCircle, CheckCircle2 } from 'lucide-react'
 import { AdminLayout } from '../components/layout'
 import {
@@ -39,26 +39,15 @@ const STATUS_OPTIONS = [
   'expired',
 ]
 
+const DEFAULT_FILTERS = { status: '', band: '', bandLabel: '', user: '', userLabel: '', from: '', to: '', eventFrom: '', eventTo: '', search: '' }
+
 export default function BookingsPage() {
-  const [filters, setFilters] = useState({
-    status: '',
-    band: '',
-    bandLabel: '',
-    user: '',
-    userLabel: '',
-    from: '',
-    to: '',
-    eventFrom: '',
-    eventTo: '',
-    search: '',
-  })
-  const [page, setPage] = useState(1)
+  const { filters, page, setPage, updateFilter, clearFilters } = useListParams(DEFAULT_FILTERS)
   const limit = 20
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [searchParams] = useSearchParams()
-  const [selectedId, setSelectedId] = useState(searchParams.get('open'))
+  const [selectedId, openDetail, closeDetail] = useOpenParam()
 
   const fetchList = useCallback(() => {
     setLoading(true)
@@ -73,11 +62,6 @@ export default function BookingsPage() {
   useEffect(() => {
     fetchList()
   }, [fetchList])
-
-  function updateFilter(key, value) {
-    setPage(1)
-    setFilters((f) => ({ ...f, [key]: value }))
-  }
 
   const columns = [
     {
@@ -106,10 +90,7 @@ export default function BookingsPage() {
           placeholder="Search customer, band…"
           values={filters}
           onChange={updateFilter}
-          onClear={() => {
-            setPage(1)
-            setFilters({ status: '', band: '', bandLabel: '', user: '', userLabel: '', from: '', to: '', eventFrom: '', eventTo: '', search: '' })
-          }}
+          onClear={clearFilters}
           fields={[
             { key: 'status', label: 'Status', type: 'select', options: STATUS_OPTIONS.map((v) => ({ value: v, label: titleCase(v) })) },
             { key: 'band', label: 'Band', type: 'entity', role: 'band', labelKey: 'bandLabel', placeholder: 'Search band name…' },
@@ -128,7 +109,7 @@ export default function BookingsPage() {
           rows={data?.items || []}
           rowKey={(b) => b._id}
           loading={loading}
-          onRowClick={(b) => setSelectedId(b._id)}
+          onRowClick={(b) => openDetail(b._id)}
           emptyState={<EmptyState icon={CalendarClock} title="No bookings found" description="Try adjusting your filters." />}
         />
         {data?.pagination && (
@@ -144,7 +125,7 @@ export default function BookingsPage() {
 
       {error && !data && <p className="mt-4 text-sm text-danger-400">{error}</p>}
 
-      {selectedId && <BookingDetailDrawer bookingId={selectedId} onClose={() => setSelectedId(null)} onChanged={fetchList} />}
+      {selectedId && <BookingDetailDrawer bookingId={selectedId} onClose={() => closeDetail()} onChanged={fetchList} />}
     </AdminLayout>
   )
 }

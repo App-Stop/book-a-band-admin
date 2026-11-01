@@ -27,25 +27,26 @@ import {
   Textarea,
 } from '../components/ui'
 import { BandPackagesAPI, PostsAPI, UsersAPI } from '../lib/api'
+import { useListParams, useOpenParam, usePagedList } from '../lib/hooks'
 import { useToast } from '../context/ToastContext'
 import { findThumb, findUrl, formatTimeRange, formatCurrency, formatDate, formatDateTime, formatNumber, initials, refId, titleCase } from '../lib/formatters'
 
 const ROLE_OPTIONS = ['user', 'band', 'admin']
 
+const DEFAULT_FILTERS = { role: '', isDeleted: '', isEmailVerified: '', search: '', from: '', to: '' }
+
 export default function UsersPage() {
-  const [filters, setFilters] = useState({ role: '', isDeleted: '', isEmailVerified: '', search: '', joinedFrom: '', joinedTo: '' })
-  const [page, setPage] = useState(1)
+  const { filters, page, setPage, updateFilter, clearFilters } = useListParams(DEFAULT_FILTERS)
   const limit = 20
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [selectedId, setSelectedId] = useState(null)
+  const [selectedId, openDetail, closeDetail] = useOpenParam()
 
   const fetchList = useCallback(() => {
     setLoading(true)
     setError('')
-    const { joinedFrom: _jf, joinedTo: _jt, ...apiFilters } = filters
-    UsersAPI.list({ ...apiFilters, page, limit })
+    UsersAPI.list({ ...filters, page, limit })
       .then((res) => setData(res.data))
       .catch((err) => setError(err?.message || 'Failed to load users.'))
       .finally(() => setLoading(false))
@@ -54,18 +55,6 @@ export default function UsersPage() {
   useEffect(() => {
     fetchList()
   }, [fetchList])
-
-  function updateFilter(key, value) {
-    setPage(1)
-    setFilters((f) => ({ ...f, [key]: value }))
-  }
-
-  const visibleItems = (data?.items || []).filter((u) => {
-    const t = new Date(u.createdAt).getTime()
-    if (filters.joinedFrom && t < new Date(`${filters.joinedFrom}T00:00:00`).getTime()) return false
-    if (filters.joinedTo && t > new Date(`${filters.joinedTo}T23:59:59`).getTime()) return false
-    return true
-  })
 
   const columns = [
     {
@@ -119,16 +108,13 @@ export default function UsersPage() {
           placeholder="Search by name, email, band name…"
           values={filters}
           onChange={updateFilter}
-          onClear={() => {
-            setPage(1)
-            setFilters({ role: '', isDeleted: '', isEmailVerified: '', search: '', joinedFrom: '', joinedTo: '' })
-          }}
+          onClear={clearFilters}
           fields={[
             { key: 'role', label: 'Role', type: 'select', options: ROLE_OPTIONS.map((r) => ({ value: r, label: titleCase(r) })) },
             { key: 'isDeleted', label: 'Status', type: 'select', options: [{ value: 'false', label: 'Active' }, { value: 'true', label: 'Suspended' }] },
             { key: 'isEmailVerified', label: 'Email', type: 'select', options: [{ value: 'true', label: 'Verified' }, { value: 'false', label: 'Unverified' }] },
-            { key: 'joinedFrom', label: 'Joined from', type: 'date' },
-            { key: 'joinedTo', label: 'Joined to', type: 'date' },
+            { key: 'from', label: 'Joined from', type: 'date' },
+            { key: 'to', label: 'Joined to', type: 'date' },
           ]}
         />
       </Card>
@@ -136,10 +122,10 @@ export default function UsersPage() {
       <Card>
         <Table
           columns={columns}
-          rows={visibleItems}
+          rows={data?.items || []}
           rowKey={(u) => u._id}
           loading={loading}
-          onRowClick={(u) => setSelectedId(u._id)}
+          onRowClick={(u) => openDetail(u._id)}
           emptyState={<EmptyState icon={UsersIcon} title="No users found" description="Try adjusting your filters." />}
         />
         {data?.pagination && (
@@ -155,7 +141,7 @@ export default function UsersPage() {
 
       {error && !data && <p className="mt-4 text-sm text-danger-400">{error}</p>}
 
-      {selectedId && <UserDetailDrawer userId={selectedId} onClose={() => setSelectedId(null)} onChanged={fetchList} />}
+      {selectedId && <UserDetailDrawer userId={selectedId} onClose={() => closeDetail()} onChanged={fetchList} />}
     </AdminLayout>
   )
 }
@@ -382,13 +368,13 @@ function UserDetailDrawer({ userId, onClose, onChanged }) {
             </div>
           )}
 
-          {tab === 'bookings' && <RecordList items={detail.bookings} type="booking" />}
-          {tab === 'payments' && <RecordList items={detail.payments} type="payment" />}
-          {tab === 'payouts' && <RecordList items={detail.payouts} type="payout" />}
+          {tab === 'bookings' && <RecordList key="booking" items={detail.bookings} type="booking" />}
+          {tab === 'payments' && <RecordList key="payment" items={detail.payments} type="payment" />}
+          {tab === 'payouts' && <RecordList key="payout" items={detail.payouts} type="payout" />}
           {tab === 'packages' && <PackagesTab items={detail.packages} onChanged={load} />}
-          {tab === 'reviews' && <RecordList items={detail.reviews} type="review" />}
+          {tab === 'reviews' && <RecordList key="review" items={detail.reviews} type="review" />}
           {tab === 'posts' && <PostsTab items={detail.posts} onChanged={load} />}
-          {tab === 'disputes' && <RecordList items={detail.disputes} type="dispute" />}
+          {tab === 'disputes' && <RecordList key="dispute" items={detail.disputes} type="dispute" />}
           {tab === 'availability' && (
             <AvailabilityTab availabilityRequests={detail.availabilityRequests} openRequests={detail.openRequests} isBand={isBand} />
           )}
@@ -491,13 +477,14 @@ function timeWindow(item) {
 }
 
 function RecordList({ items, type }) {
+  const { rows, pagination } = usePagedList(items)
   if (!items || items.length === 0) {
     return <EmptyState title="No records" description="Nothing to show here yet." />
   }
 
   return (
     <div className="space-y-4">
-      {items.map((item) => {
+      {rows.map((item) => {
         const bookingId = type === 'booking' ? item._id : refId(item.booking) || item.bookingId
         return (
           <Card key={item._id} className="p-4">
@@ -612,12 +599,14 @@ function RecordList({ items, type }) {
           </Card>
         )
       })}
+      <Pagination {...pagination} />
     </div>
   )
 }
 
 function PackagesTab({ items, onChanged }) {
   const toast = useToast()
+  const { rows, pagination } = usePagedList(items)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [busy, setBusy] = useState(false)
 
@@ -642,7 +631,7 @@ function PackagesTab({ items, onChanged }) {
 
   return (
     <div className="space-y-4">
-      {items.map((p) => (
+      {rows.map((p) => (
         <Card key={p._id} className="flex items-start justify-between gap-2 p-4">
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-slate-100">{p.name || p.title}</p>
@@ -674,6 +663,7 @@ function PackagesTab({ items, onChanged }) {
           </div>
         </Card>
       ))}
+      <Pagination {...pagination} />
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}
@@ -705,6 +695,7 @@ function PostThumb({ post }) {
 
 function PostsTab({ items, onChanged }) {
   const toast = useToast()
+  const { rows, pagination } = usePagedList(items, 12)
   const [deleteTarget, setDeleteTarget] = useState(null)
   const [busy, setBusy] = useState(false)
 
@@ -729,7 +720,7 @@ function PostsTab({ items, onChanged }) {
 
   return (
     <div className="grid grid-cols-1 gap-5 min-[480px]:grid-cols-2 lg:grid-cols-3">
-      {items.map((p) => (
+      {rows.map((p) => (
         <Card key={p._id} className="flex aspect-square flex-col overflow-hidden">
           <div className="relative min-h-0 flex-[7]">
             <PostThumb post={p} />
@@ -758,6 +749,9 @@ function PostsTab({ items, onChanged }) {
           </div>
         </Card>
       ))}
+      <div className="col-span-full">
+        <Pagination {...pagination} />
+      </div>
 
       <ConfirmDialog
         open={Boolean(deleteTarget)}
@@ -774,6 +768,7 @@ function PostsTab({ items, onChanged }) {
 }
 
 function AvailabilityTab({ availabilityRequests, openRequests, isBand }) {
+  const { rows: offerRows, pagination: offerPagination } = usePagedList(openRequests?.offers, 5)
   return (
     <div className="space-y-5">
       <div>
@@ -788,7 +783,7 @@ function AvailabilityTab({ availabilityRequests, openRequests, isBand }) {
             <EmptyState title="No offers" description="This band hasn't submitted any open-request offers." />
           ) : (
             <div className="space-y-2">
-              {openRequests.offers.map((o) => (
+              {offerRows.map((o) => (
                 <Card key={o._id} className="flex items-center justify-between gap-2 p-3.5">
                   <div className="min-w-0">
                     <p className="truncate text-sm text-slate-200">
@@ -802,6 +797,7 @@ function AvailabilityTab({ availabilityRequests, openRequests, isBand }) {
                   <StatusBadge status={o.openRequest?.status} />
                 </Card>
               ))}
+              <Pagination {...offerPagination} />
             </div>
           )}
 

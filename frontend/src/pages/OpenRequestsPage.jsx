@@ -17,6 +17,7 @@ import {
   Table,
 } from '../components/ui'
 import { OpenRequestsAPI } from '../lib/api'
+import { useListParams, useOpenParam } from '../lib/hooks'
 import { useToast } from '../context/ToastContext'
 import { formatDateTime, titleCase } from '../lib/formatters'
 
@@ -24,17 +25,19 @@ const STATUS_OPTIONS = ['open', 'closed', 'expired', 'cancelled']
 const REQUEST_KNOWN_KEYS = ['_id', 'user', 'status', 'createdAt', 'updatedAt']
 const LOCATION_KEY = /location|address|coordinates|latitude|longitude|geo|lat$|lng$|lon$/i
 
+const DEFAULT_FILTERS = { status: '' }
+
 export default function OpenRequestsPage() {
   const toast = useToast()
-  const [status, setStatus] = useState('')
-  const [page, setPage] = useState(1)
+  const { filters, page, setPage, updateFilter, clearFilters } = useListParams(DEFAULT_FILTERS)
+  const { status } = filters
   const limit = 20
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [expireTarget, setExpireTarget] = useState(null)
   const [busy, setBusy] = useState(false)
-  const [selectedId, setSelectedId] = useState(null)
+  const [selectedId, openDetail, closeDetail] = useOpenParam()
 
   const fetchList = useCallback(() => {
     setLoading(true)
@@ -103,8 +106,8 @@ export default function OpenRequestsPage() {
       <Card className="mb-4 p-4">
         <FilterBar
           values={{ status }}
-          onChange={(_, v) => (setPage(1), setStatus(v))}
-          onClear={() => (setPage(1), setStatus(''))}
+          onChange={updateFilter}
+          onClear={clearFilters}
           fields={[{ key: 'status', label: 'Status', type: 'select', options: STATUS_OPTIONS.map((v) => ({ value: v, label: titleCase(v) })) }]}
         />
       </Card>
@@ -115,7 +118,7 @@ export default function OpenRequestsPage() {
           rows={data?.items || []}
           rowKey={(r) => r._id}
           loading={loading}
-          onRowClick={(r) => setSelectedId(r._id)}
+          onRowClick={(r) => openDetail(r._id)}
           emptyState={<EmptyState icon={Inbox} title="No open requests" description="Try adjusting your filters." />}
         />
         {data?.pagination && (
@@ -134,9 +137,9 @@ export default function OpenRequestsPage() {
       {selectedRequest && (
         <OpenRequestDrawer
           request={selectedRequest}
-          onClose={() => setSelectedId(null)}
+          onClose={() => closeDetail()}
           onExpire={(r) => {
-            setSelectedId(null)
+            closeDetail()
             setExpireTarget(r)
           }}
         />

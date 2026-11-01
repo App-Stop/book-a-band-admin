@@ -37,12 +37,19 @@ export function formatTimeRange(start, end) {
   return `${t(s)} – ${t(e)}`
 }
 
-export function formatCurrency(value, currency = 'USD') {
-  if (value == null || Number.isNaN(Number(value))) return '—'
+/** The API returns money in cents: 12550 -> "$125.50". */
+export function formatCurrency(cents, currency = 'USD') {
+  if (cents == null || cents === '' || Number.isNaN(Number(cents))) return '—'
+  const dollars = Number(cents) / 100
   try {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(Number(value))
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(dollars)
   } catch {
-    return `$${Number(value).toFixed(2)}`
+    return `$${dollars.toFixed(2)}`
   }
 }
 
