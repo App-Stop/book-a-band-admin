@@ -35,6 +35,11 @@ const ROLE_OPTIONS = ['user', 'band', 'admin']
 
 const DEFAULT_FILTERS = { role: '', isDeleted: '', isEmailVerified: '', search: '', from: '', to: '' }
 
+/** The role the account is acting as right now; falls back to its first role if `activeRole` isn't set. */
+function activeRoleOf(user) {
+  return user.activeRole || (Array.isArray(user.role) ? user.role[0] : user.role) || null
+}
+
 export default function UsersPage() {
   const { filters, page, setPage, updateFilter, clearFilters } = useListParams(DEFAULT_FILTERS)
   const limit = 20
@@ -60,22 +65,26 @@ export default function UsersPage() {
     {
       key: 'user',
       header: 'User',
-      render: (u) => (
-        <div className="flex items-center gap-3">
-          <Avatar size="sm" src={u.bandProfile?.profilePicture || u.profilePicture} name={u.fullName || u.email} />
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <p className="truncate text-sm font-medium text-slate-100">{u.bandProfile?.fullName || u.fullName || 'Unnamed'}</p>
-              {u.bandProfile && (
-                <Badge tone="info" className="shrink-0">
-                  Band
-                </Badge>
-              )}
+      render: (u) => {
+        const currentRole = activeRoleOf(u)
+        const asBand = currentRole === 'band' ? u.bandProfile : null
+        return (
+          <div className="flex items-center gap-3">
+            <Avatar size="sm" src={asBand?.profilePicture || u.profilePicture} name={u.fullName || u.email} />
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <p className="truncate text-sm font-medium text-slate-100">{asBand?.fullName || u.fullName || 'Unnamed'}</p>
+                {currentRole && (
+                  <Badge tone={currentRole === 'band' ? 'info' : 'neutral'} className="shrink-0">
+                    {titleCase(currentRole)}
+                  </Badge>
+                )}
+              </div>
+              <p className="truncate text-xs text-slate-500">{u.email}</p>
             </div>
-            <p className="truncate text-xs text-slate-500">{u.email}</p>
           </div>
-        </div>
-      ),
+        )
+      },
     },
     {
       key: 'role',
