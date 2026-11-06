@@ -61,7 +61,7 @@ function Brand() {
         <img src="/Vector.png" alt="" className="h-5 w-5 object-contain" />
       </div>
       <div className="min-w-0">
-        <p className="truncate text-sm font-bold tracking-tight text-white">BookABand</p>
+        <p className="truncate text-sm font-bold tracking-tight text-white">Book A Band</p>
         <p className="truncate text-[11px] font-medium uppercase tracking-wider text-violet-300">Admin Console</p>
       </div>
     </div>

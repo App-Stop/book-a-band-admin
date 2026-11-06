@@ -101,7 +101,7 @@ export function StatCard({ icon: Icon, label, value, hint, accent = 'brand' }) {
 /* ---------------------------- Status badge --------------------------- */
 
 const STATUS_MAP = {
-  success: ['confirmed', 'accepted', 'completed', 'resolved', 'active', 'won', 'closed_won', 'verified', 'paid', 'paid_out'],
+  success: ['confirmed', 'accepted', 'completed', 'resolved', 'resolved_for_customer', 'resolved_for_band', 'active', 'won', 'closed_won', 'verified', 'paid', 'paid_out'],
   danger: ['cancelled', 'declined', 'failed', 'expired', 'rejected', 'suspended', 'deleted', 'disputed', 'refunded'],
   warning: [
     'pending',
@@ -111,6 +111,7 @@ const STATUS_MAP = {
     'in_progress',
     'open',
     'review',
+    'under_review',
     'holding_funds',
   ],
   info: ['new', 'unread'],

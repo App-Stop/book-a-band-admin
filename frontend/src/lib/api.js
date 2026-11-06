@@ -118,4 +118,6 @@ export const DashboardAPI = {
 export const DisputesAPI = {
   list: (params) => apiClient.get('/admin/disputes', { params: stripEmpty(params) }),
   get: (id) => apiClient.get(`/admin/disputes/${id}`),
+  // decision: 'user' (refund; refundAmount is a % of the booking subtotal) or 'band' (release funds)
+  resolve: (id, body) => apiClient.post(`/direct-booking/admin/disputes/${id}/resolve`, body),
 }
