@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Users as UsersIcon, ShieldCheck, UserCog, Ban, RotateCcw, Trash2, Mail, IdCard, Music2, ImageIcon } from 'lucide-react'
+import { Users as UsersIcon, ShieldCheck, Ban, RotateCcw, Trash2, Mail, IdCard, Music2, ImageIcon } from 'lucide-react'
 import { AdminLayout } from '../components/layout'
 import {
   AppLink,
@@ -20,7 +20,6 @@ import {
   Pagination,
   SearchInput,
   SectionHeading,
-  Select,
   StatusBadge,
   Table,
   Tabs,
@@ -163,10 +162,8 @@ function UserDetailDrawer({ userId, onClose, onChanged }) {
   const [tab, setTab] = useState('overview')
   const [busy, setBusy] = useState(false)
 
-  const [roleModal, setRoleModal] = useState(false)
   const [suspendModal, setSuspendModal] = useState(false)
   const [restoreConfirm, setRestoreConfirm] = useState(false)
-  const [roleDraft, setRoleDraft] = useState({ role: [], activeRole: '' })
   const [suspendReason, setSuspendReason] = useState('')
 
   const load = useCallback(() => {
@@ -175,11 +172,6 @@ function UserDetailDrawer({ userId, onClose, onChanged }) {
     UsersAPI.get(userId)
       .then((res) => {
         setDetail(res.data)
-        const u = res.data?.user
-        setRoleDraft({
-          role: Array.isArray(u?.role) ? u.role : u?.role ? [u.role] : [],
-          activeRole: u?.activeRole || '',
-        })
       })
       .catch((err) => setError(err?.message || 'Failed to load user.'))
       .finally(() => setLoading(false))
@@ -200,28 +192,6 @@ function UserDetailDrawer({ userId, onClose, onChanged }) {
       onChanged()
     } catch (err) {
       toast.error(err?.message || 'Failed to verify email.')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function handleSaveRole() {
-    if (roleDraft.role.length === 0) {
-      toast.error('Select at least one role.')
-      return
-    }
-    setBusy(true)
-    try {
-      await UsersAPI.setRole(userId, {
-        role: roleDraft.role,
-        ...(roleDraft.activeRole ? { activeRole: roleDraft.activeRole } : {}),
-      })
-      toast.success('Role updated.')
-      setRoleModal(false)
-      load()
-      onChanged()
-    } catch (err) {
-      toast.error(err?.message || 'Failed to update role.')
     } finally {
       setBusy(false)
     }
@@ -258,13 +228,6 @@ function UserDetailDrawer({ userId, onClose, onChanged }) {
     }
   }
 
-  function toggleRole(role) {
-    setRoleDraft((d) => ({
-      ...d,
-      role: d.role.includes(role) ? d.role.filter((r) => r !== role) : [...d.role, role],
-    }))
-  }
-
   const counts = detail?.counts || {}
   const isBand = Boolean(detail?.band)
 
@@ -294,9 +257,6 @@ function UserDetailDrawer({ userId, onClose, onChanged }) {
                 <ShieldCheck className="h-4 w-4" /> Verify email
               </Button>
             )}
-            <Button variant="secondary" onClick={() => setRoleModal(true)}>
-              <UserCog className="h-4 w-4" /> Change role
-            </Button>
             {user.isDeleted ? (
               <Button variant="secondary" onClick={() => setRestoreConfirm(true)}>
                 <RotateCcw className="h-4 w-4" /> Restore
@@ -389,54 +349,6 @@ function UserDetailDrawer({ userId, onClose, onChanged }) {
           )}
         </div>
       )}
-
-      <Modal
-        open={roleModal}
-        onClose={() => setRoleModal(false)}
-        title="Change role"
-        description="Choose which roles this account can act as."
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setRoleModal(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSaveRole} loading={busy}>
-              Save changes
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          <Field label="Roles">
-            <div className="flex flex-wrap gap-2">
-              {ROLE_OPTIONS.map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => toggleRole(r)}
-                  className={`focus-ring rounded-full border px-3.5 py-1.5 text-sm font-medium transition ${
-                    roleDraft.role.includes(r)
-                      ? 'border-brand-500/60 bg-brand-500/20 text-brand-200'
-                      : 'border-slate-900/10 text-slate-400 hover:text-slate-200'
-                  }`}
-                >
-                  {titleCase(r)}
-                </button>
-              ))}
-            </div>
-          </Field>
-          <Field label="Active role">
-            <Select value={roleDraft.activeRole} onChange={(e) => setRoleDraft((d) => ({ ...d, activeRole: e.target.value }))}>
-              <option value="">Unchanged</option>
-              {roleDraft.role.map((r) => (
-                <option key={r} value={r}>
-                  {titleCase(r)}
-                </option>
-              ))}
-            </Select>
-          </Field>
-        </div>
-      </Modal>
 
       <Modal
         open={suspendModal}
