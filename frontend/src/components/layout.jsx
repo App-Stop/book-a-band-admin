@@ -15,20 +15,22 @@ import {
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useAuth } from '../context/AuthContext'
+import { useBadges } from '../context/BadgesContext'
 import { initials } from '../lib/formatters'
 import { IconButton } from './ui'
 
 const NAV_ITEMS = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/users', label: 'Users & Bands', icon: Users },
-  { to: '/bookings', label: 'Bookings', icon: CalendarClock },
-  { to: '/disputes', label: 'Disputes', icon: ShieldAlert },
-  { to: '/open-requests', label: 'Open Requests', icon: Inbox },
-  { to: '/moderation', label: 'Moderation', icon: ShieldCheck },
-  { to: '/payouts', label: 'Payouts', icon: Wallet },
+  { to: '/users', label: 'Users & Bands', icon: Users, section: 'users' },
+  { to: '/bookings', label: 'Bookings', icon: CalendarClock, section: 'booking' },
+  { to: '/disputes', label: 'Disputes', icon: ShieldAlert, section: 'dispute' },
+  { to: '/open-requests', label: 'Open Requests', icon: Inbox, section: 'open_request' },
+  { to: '/moderation', label: 'Moderation', icon: ShieldCheck, section: 'moderation' },
+  { to: '/payouts', label: 'Payouts', icon: Wallet, section: 'payout' },
 ]
 
 function NavList({ onNavigate }) {
+  const { groups } = useBadges()
   return (
     <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-2">
       {NAV_ITEMS.map((item) => (
@@ -48,6 +50,11 @@ function NavList({ onNavigate }) {
         >
           <item.icon className="h-4.5 w-4.5 shrink-0" />
           <span className="truncate">{item.label}</span>
+          {item.section && groups[item.section] > 0 && (
+            <span className="ml-auto shrink-0 rounded-full bg-rose-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
+              {groups[item.section] > 99 ? '99+' : groups[item.section]}
+            </span>
+          )}
         </NavLink>
       ))}
     </nav>

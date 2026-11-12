@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Users as UsersIcon, ShieldCheck, Ban, RotateCcw, Trash2, Mail, IdCard, Music2, ImageIcon } from 'lucide-react'
+import { Users as UsersIcon, ShieldCheck, Bell, Ban, RotateCcw, Trash2, Mail, IdCard, Music2, ImageIcon } from 'lucide-react'
 import { AdminLayout } from '../components/layout'
 import {
   AppLink,
@@ -28,6 +28,8 @@ import {
 import { BandPackagesAPI, PostsAPI, UsersAPI } from '../lib/api'
 import { useListParams, useOpenParam, usePagedList } from '../lib/hooks'
 import { useToast } from '../context/ToastContext'
+import { useAuth } from '../context/AuthContext'
+import { DeleteUserModal, SendNotificationModal } from '../components/UserActionModals'
 import { findThumb, findUrl, formatTimeRange, formatCurrency, formatDate, formatDateTime, formatNumber, initials, refId, titleCase } from '../lib/formatters'
 
 const ROLE_OPTIONS = ['user', 'band', 'admin']
@@ -162,8 +164,11 @@ function UserDetailDrawer({ userId, onClose, onChanged }) {
   const [tab, setTab] = useState('overview')
   const [busy, setBusy] = useState(false)
 
+  const { user: currentAdmin } = useAuth()
   const [suspendModal, setSuspendModal] = useState(false)
   const [restoreConfirm, setRestoreConfirm] = useState(false)
+  const [deleteModal, setDeleteModal] = useState(false)
+  const [notifyModal, setNotifyModal] = useState(false)
   const [suspendReason, setSuspendReason] = useState('')
 
   const load = useCallback(() => {
@@ -257,6 +262,11 @@ function UserDetailDrawer({ userId, onClose, onChanged }) {
                 <ShieldCheck className="h-4 w-4" /> Verify email
               </Button>
             )}
+            {!user.isDeleted && (
+              <Button variant="secondary" onClick={() => setNotifyModal(true)}>
+                <Bell className="h-4 w-4" /> Send notification
+              </Button>
+            )}
             {user.isDeleted ? (
               <Button variant="secondary" onClick={() => setRestoreConfirm(true)}>
                 <RotateCcw className="h-4 w-4" /> Restore
@@ -264,6 +274,12 @@ function UserDetailDrawer({ userId, onClose, onChanged }) {
             ) : (
               <Button variant="danger" onClick={() => setSuspendModal(true)}>
                 <Ban className="h-4 w-4" /> Suspend
+              </Button>
+            )}
+            {/* The backend doesn't stop an admin deleting themselves or another admin, so hide it here. */}
+            {user._id !== currentAdmin?._id && !(Array.isArray(user.role) ? user.role : [user.role]).includes('admin') && (
+              <Button variant="danger" onClick={() => setDeleteModal(true)}>
+                <Trash2 className="h-4 w-4" /> Delete
               </Button>
             )}
           </>
@@ -370,6 +386,19 @@ function UserDetailDrawer({ userId, onClose, onChanged }) {
           <Textarea rows={3} value={suspendReason} onChange={(e) => setSuspendReason(e.target.value)} placeholder="Why is this account being suspended?" />
         </Field>
       </Modal>
+
+      {deleteModal && user && (
+        <DeleteUserModal
+          user={user}
+          onClose={() => setDeleteModal(false)}
+          onDeleted={() => {
+            setDeleteModal(false)
+            onChanged()
+            onClose()
+          }}
+        />
+      )}
+      {notifyModal && user && <SendNotificationModal user={user} onClose={() => setNotifyModal(false)} />}
 
       <ConfirmDialog
         open={restoreConfirm}

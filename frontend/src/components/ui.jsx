@@ -735,9 +735,9 @@ function usePersonPicture(person, role) {
 }
 
 /** Compact avatar + name + email, for table cells. */
-export function PersonCell({ person, role = 'user', fallback = '—' }) {
+export function PersonCell({ person, role = 'user', fallback }) {
   const pic = usePersonPicture(person, role)
-  if (!person) return <span className="text-slate-500">{fallback}</span>
+  if (!person) return <span className="text-slate-500">{fallback ?? (role === 'band' ? 'Deleted band' : 'Deleted user')}</span>
   return (
     <div className="flex items-center gap-3">
       <Avatar size="sm" src={pic} name={person.fullName || person.email} />
@@ -752,7 +752,17 @@ export function PersonCell({ person, role = 'user', fallback = '—' }) {
 /** Profile card used in drawers: big round picture, name, email, role label. */
 export function ProfileCard({ label, person, role }) {
   const pic = usePersonPicture(person, role || (label === 'Band' ? 'band' : 'user'))
-  if (!person) return null
+  if (!person) {
+    const isBand = (role || (label === 'Band' ? 'band' : 'user')) === 'band'
+    return (
+      <Card className="flex items-center gap-4 p-4">
+        <div>
+          {label && <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-600">{label}</p>}
+          <p className="text-sm text-slate-500">{isBand ? 'Deleted band' : 'Deleted user'}</p>
+        </div>
+      </Card>
+    )
+  }
   return (
     <Card className="flex items-center gap-4 p-4">
       <Avatar size="lg" src={pic} name={person.fullName || person.email} className="ring-4 ring-brand-500/10" />

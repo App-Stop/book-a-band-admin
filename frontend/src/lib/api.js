@@ -64,6 +64,17 @@ export const UsersAPI = {
   setRole: (userId, body) => apiClient.patch(`/admin/users/${userId}/role`, body),
   suspend: (userId, reason) => apiClient.post(`/admin/users/${userId}/suspend`, reason ? { reason } : {}),
   restore: (userId) => apiClient.post(`/admin/users/${userId}/restore`),
+  // Hard delete (irreversible). A DELETE body goes in `data`, not as the 2nd argument.
+  remove: (userId, reason) => apiClient.delete(`/admin/users/${userId}`, { data: reason ? { reason } : {} }),
+}
+
+export const NotificationsAPI = {
+  send: (body) => apiClient.post('/admin/notifications/send', body),
+}
+
+export const BadgesAPI = {
+  counts: () => apiClient.get('/admin/badge-counts'),
+  markRead: (section) => apiClient.patch(`/admin/badge-counts/${section}/read`),
 }
 
 export const BookingsAPI = {

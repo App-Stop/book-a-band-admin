@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { BadgesProvider } from '../context/BadgesContext'
 
 export function ProtectedRoute() {
   const { isAuthenticated } = useAuth()
@@ -9,7 +10,11 @@ export function ProtectedRoute() {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
-  return <Outlet />
+  return (
+    <BadgesProvider>
+      <Outlet />
+    </BadgesProvider>
+  )
 }
 
 export function PublicOnlyRoute() {
